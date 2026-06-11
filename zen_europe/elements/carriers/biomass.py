@@ -9,10 +9,12 @@ from zen_creator import Attribute, Carrier, CarrierConfig
 
 from zen_europe.datasets.datasets.carriers.biomass.enspreso import ENSPRESO
 
+
 class BiomassConfig(CarrierConfig):
     name: str = "biomass"
     type: str = "BiomassConfig"
     scenario: str = "ENS_Med"
+
 
 class Biomass(Carrier):
     """Class containing all data for biomass carrier."""

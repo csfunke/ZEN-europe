@@ -7,7 +7,6 @@ from zen_creator import (
     Element,
     MetaData,
     SourceInformation,
-    DatasetConfig,
 )
 
 BIOMASS_TYPE_MAP = {
@@ -177,7 +176,7 @@ class ENSPRESO(Dataset[pd.DataFrame]):
 
     def get_scenario(self, element: Element) -> str:
         """
-        Extract scenario from the carrier configurations
+        Extract scenario from the carrier configurations.
         """
         element_name = element.name
         if not element.model.config.data.carrier.get(element_name, {}):
@@ -193,6 +192,6 @@ class ENSPRESO(Dataset[pd.DataFrame]):
             raise ValueError(
                 f"The configuration for carrier {element_name} has an invalid"
                 f"setting 'scenario': {scenario}. The scenario must be one of "
-                f"{", ".join(ALLOWED_SCENARIOS)}"
+                f"{', '.join(ALLOWED_SCENARIOS)}"
             )
         return scenario

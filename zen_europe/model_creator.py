@@ -2,6 +2,11 @@ from pathlib import Path
 
 from zen_creator import Model
 
+from .datasets import (
+    dataset_collections,  # noqa: F401
+    datasets,  # noqa: F401
+)
+
 # import custom element classes to register them in the registry (side effect)
 from .elements import (
     carriers,  # noqa: F401
@@ -9,11 +14,6 @@ from .elements import (
     energy_systems,  # noqa: F401
     storage_technologies,  # noqa: F401
     transport_technologies,  # noqa: F401
-)
-
-from .datasets import (
-    datasets, # noqa: F401
-    dataset_collections, #noqa: F401
 )
 
 
