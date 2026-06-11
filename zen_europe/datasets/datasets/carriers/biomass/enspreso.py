@@ -1,7 +1,7 @@
 from pathlib import Path
 
 import pandas as pd
-from zen_creator import Attribute, Dataset, Element, MetaData, SourceInformation
+from zen_creator import Attribute, Dataset, Element, MetaData, SourceInformation, DatasetConfig
 
 BIOMASS_TYPE_MAP = {
     "biomass": [
@@ -30,6 +30,10 @@ BIOMASS_TYPE_MAP = {
     ],
 }
 
+class ENSPRESOConfig(DatasetConfig):
+    name: str = "enspresso"
+    type: str = "ENSPRESOConfig"
+    scenario: str = "ENS_Med"
 
 class ENSPRESO(Dataset[pd.DataFrame]):
     """
