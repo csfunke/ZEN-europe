@@ -14,7 +14,7 @@ authors = [
 ]
 
 dependencies = [
-    "zen-creator>=1.2.0"
+    "zen-creator>=1.2.2"
 ]
 
 [project.scripts]
