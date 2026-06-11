@@ -1,7 +1,14 @@
 from pathlib import Path
 
 import pandas as pd
-from zen_creator import Attribute, Dataset, Element, MetaData, SourceInformation, DatasetConfig
+from zen_creator import (
+    Attribute,
+    Dataset,
+    Element,
+    MetaData,
+    SourceInformation,
+    DatasetConfig,
+)
 
 BIOMASS_TYPE_MAP = {
     "biomass": [
@@ -30,10 +37,15 @@ BIOMASS_TYPE_MAP = {
     ],
 }
 
-class ENSPRESOConfig(DatasetConfig):
-    name: str = "enspresso"
-    type: str = "ENSPRESOConfig"
-    scenario: str = "ENS_Med"
+ALLOWED_SCENARIOS = [
+    "ENS_Low",
+    "ENS_Med",
+    "ENS_High",
+    "ENS_High_Forest400Mm3",
+    "ENS_Med_ForestBaU",
+    "ENS_Low_ForestBaU",
+]
+
 
 class ENSPRESO(Dataset[pd.DataFrame]):
     """
@@ -88,7 +100,7 @@ class ENSPRESO(Dataset[pd.DataFrame]):
 
     def get_availability_import(self, element: Element) -> Attribute:
 
-        scenario = "ENS_Med"
+        scenario = self.get_scenario(element)
         biomass_types = BIOMASS_TYPE_MAP[element.name]
         biomass_potential: pd.DataFrame = self.data[
             (self.data["Scenario"] == scenario)
@@ -162,3 +174,25 @@ class ENSPRESO(Dataset[pd.DataFrame]):
             sources=[source_info],
         )
         return attr
+
+    def get_scenario(self, element: Element) -> str:
+        """
+        Extract scenario from the carrier configurations
+        """
+        element_name = element.name
+        if not element.model.config.data.carrier.get(element_name, {}):
+            raise ValueError(f"Missing configurations for carrier {element_name}.")
+        element_config = element.model.config.data.carrier.get(element_name)
+        if not hasattr(element_config, "scenario"):
+            raise ValueError(
+                f"The configuration for carrier {element_name} does not have"
+                "have a setting named 'scenario'."
+            )
+        scenario = element_config.scenario
+        if scenario not in ALLOWED_SCENARIOS:
+            raise ValueError(
+                f"The configuration for carrier {element_name} has an invalid"
+                f"setting 'scenario': {scenario}. The scenario must be one of "
+                f"{", ".join(ALLOWED_SCENARIOS)}"
+            )
+        return scenario
