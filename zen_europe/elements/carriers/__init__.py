@@ -1,9 +1,11 @@
-from .biomass import Biomass
-from .wet_biomass import WetBiomass
+from .biomass import Biomass, BiomassConfig
+from .wet_biomass import WetBiomass, WetBiomassConfig
 from .electricity import Electricity
 
 __all__ = [
     "Biomass",
+    "BiomassConfig",
     "Electricity",
-    "WetBiomass"
+    "WetBiomass",
+    "WetBiomassConfig",
 ]

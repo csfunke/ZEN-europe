@@ -5,10 +5,14 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from zen_creator import Model
 
-from zen_creator import Attribute, Carrier
+from zen_creator import Attribute, Carrier, CarrierConfig
 
 from zen_europe.datasets.datasets.carriers.biomass.enspreso import ENSPRESO
 
+class WetBiomassConfig(CarrierConfig):
+    name: str = "wet_biomass"
+    type: str = "WetBiomassConfig"
+    scenario: str = "ENS_Med"
 
 class WetBiomass(Carrier):
     """Class containing all data for the wet_biomass carrier."""

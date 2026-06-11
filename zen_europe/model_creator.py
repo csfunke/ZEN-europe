@@ -11,6 +11,11 @@ from .elements import (
     transport_technologies,  # noqa: F401
 )
 
+from .datasets import (
+    datasets, # noqa: F401
+    dataset_collections, #noqa: F401
+)
+
 
 def create_model(
     config: Path | str | None = None,
