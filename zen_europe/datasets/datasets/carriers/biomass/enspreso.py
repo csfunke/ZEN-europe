@@ -182,12 +182,14 @@ class ENSPRESO(Dataset[pd.DataFrame]):
         if not element.model.config.data.carrier.get(element_name, {}):
             raise ValueError(f"Missing configurations for carrier {element_name}.")
         element_config = element.model.config.data.carrier.get(element_name)
-        if not hasattr(element_config, "scenario"):
+
+        # get scenario from the carrier configuration, raise error if not found
+        scenario = getattr(element_config, "scenario", None)
+        if scenario is None:
             raise ValueError(
-                f"The configuration for carrier {element_name} does not have"
-                "have a setting named 'scenario'."
+                f"The configuration for carrier {element_name} does not "
+                "have a setting named 'scenario' or is None."
             )
-        scenario = element_config.scenario
         if scenario not in ALLOWED_SCENARIOS:
             raise ValueError(
                 f"The configuration for carrier {element_name} has an invalid"
