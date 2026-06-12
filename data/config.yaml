@@ -193,10 +193,17 @@ elements:
 
 # settings for individual data sources
 data:
-  datasets:
-    setting: true
-  dataset_collections:
-    setting: true
+  dataset: {}
+  dataset_collection: {}
+  carrier:
+    biomass:
+      name: biomass
+      type: BiomassConfig
+      scenario: ENS_Med
+    wet_biomass:
+      name: wet_biomass
+      type: WetBiomassConfig
+      scenario: ENS_Med
 
 # settings that go into the energy_system folder
 energy_system:
