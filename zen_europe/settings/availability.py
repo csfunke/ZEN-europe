@@ -14,3 +14,5 @@ class AvailabilitySettings(SettingsCategory):
     annual_cap_biomass_import: bool = False
     allow_heat_demand_shedding: bool = False
     allow_all_demand_shedding: bool = False
+    allow_hydrogen_imports: bool = False
+    use_transport_limits: bool = False

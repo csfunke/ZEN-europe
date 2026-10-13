@@ -10,3 +10,4 @@ class MaxLoadSettings(SettingsCategory):
 
     use_seasonal_nuclear_max_load: bool = True
     use_nodal_nuclear_max_load: bool = True
+    use_nuclear_min_full_load_hours: bool = False

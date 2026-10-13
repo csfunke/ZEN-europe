@@ -25,6 +25,8 @@ class InvestmentSettings(SettingsCategory):
     # takes precedence over cap_nuclear_capacity_to_past_investments
     use_nuclear_phase_out: bool = True
     cap_nuclear_capacity_to_past_investments: bool = True
+    use_current_nuclear_policies: bool = False
+    use_extended_nuclear_lifetime: bool = False
     use_power_line_capacity_limit: bool = True
     allow_offshore_chemical_pipelines: bool = False
     account_for_offshore_transport: bool = True

@@ -16,3 +16,6 @@ class ScenarioSettings(SettingsCategory):
     sensitivity_discount_rate: bool = False
     sensitivity_biomass: bool = False
     sensitivity_no_diffusion_rate: bool = False
+    sensitivity_reg4fuels: bool = False
+    sensitivity_operations: bool = False
+    sensitivity_transport_limits: bool = False

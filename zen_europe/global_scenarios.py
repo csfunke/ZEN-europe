@@ -33,3 +33,11 @@ def define_global_scenarios(model: Model) -> None:
             param="max_diffusion_rate",
             default_op=0.0,
         )
+    if model.settings.scenario.sensitivity_operations:
+        model.scenarios.add(
+            "full_year",
+            system={
+                "conduct_time_series_aggregation": False,
+                "aggregated_time_steps_per_year": 8760,
+            },
+        )

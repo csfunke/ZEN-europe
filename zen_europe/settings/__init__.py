@@ -3,6 +3,7 @@
 # model.settings.<name> (e.g. model.settings.time).
 from .availability import AvailabilitySettings  # noqa: F401
 from .cache import CacheSettings  # noqa: F401
+from .calibration import CalibrationSettings  # noqa: F401
 from .cost import CostSettings  # noqa: F401
 from .data_source import DataSourceSettings  # noqa: F401
 from .emissions import EmissionsSettings  # noqa: F401
@@ -21,6 +22,7 @@ __all__ = [
     "EmissionsSettings",
     "DataSourceSettings",
     "AvailabilitySettings",
+    "CalibrationSettings",
     "MaxLoadSettings",
     "OutputSettings",
     "ScenarioSettings",

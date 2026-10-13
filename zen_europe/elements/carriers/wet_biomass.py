@@ -13,6 +13,10 @@ from zen_europe.datasets.datasets.carrier.enspreso_biomass import (
     EnspresoBiomassPrice,
 )
 from zen_europe.datasets.datasets.financial.ECB import ECBInflation
+from zen_europe.reg4fuels import (
+    ABUNDANT_SUBSTITUTES_SCENARIOS,
+    SCARCE_SUBSTITUTES_SCENARIOS,
+)
 
 
 class WetBiomass(Carrier):
@@ -45,25 +49,52 @@ class WetBiomass(Carrier):
         attr = enspreso.get_availability_import(
             element=self, biomass_types=self._biomass_types
         )
-        if self.settings.scenario.sensitivity_biomass:
-            attr.add_scenarios(
-                [
+        if (
+            self.settings.scenario.sensitivity_biomass
+            or self.settings.scenario.sensitivity_reg4fuels
+        ):
+            scenarios = []
+            if self.settings.scenario.sensitivity_biomass:
+                scenarios.extend(
+                    [
+                        enspreso.get_availability_import_scenario(
+                            element=self,
+                            biomass_types=self._biomass_types,
+                            name="biomass_low",
+                            ens_scenario="ENS_Low",
+                            suffix="low",
+                        ),
+                        enspreso.get_availability_import_scenario(
+                            element=self,
+                            biomass_types=self._biomass_types,
+                            name="biomass_high",
+                            ens_scenario="ENS_High",
+                            suffix="high",
+                        ),
+                    ]
+                )
+            if self.settings.scenario.sensitivity_reg4fuels:
+                scenarios.extend(
                     enspreso.get_availability_import_scenario(
                         element=self,
                         biomass_types=self._biomass_types,
-                        name="biomass_low",
+                        name=name,
                         ens_scenario="ENS_Low",
                         suffix="low",
-                    ),
+                    )
+                    for name in SCARCE_SUBSTITUTES_SCENARIOS
+                )
+                scenarios.extend(
                     enspreso.get_availability_import_scenario(
                         element=self,
                         biomass_types=self._biomass_types,
-                        name="biomass_high",
+                        name=name,
                         ens_scenario="ENS_High",
                         suffix="high",
-                    ),
-                ]
-            )
+                    )
+                    for name in ABUNDANT_SUBSTITUTES_SCENARIOS
+                )
+            attr.add_scenarios(scenarios)
         return attr
 
     def _set_availability_import_yearly(self) -> Attribute:

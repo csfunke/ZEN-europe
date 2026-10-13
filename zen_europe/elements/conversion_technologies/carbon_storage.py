@@ -19,6 +19,10 @@ from zen_europe.datasets.datasets.technology.northern_lights_costs import (
 from zen_europe.datasets.datasets.technology.technology_diffusion_mannhardt import (
     TechnologyDiffusionMannhardt,
 )
+from zen_europe.reg4fuels import (
+    ABUNDANT_SUBSTITUTES_SCENARIOS,
+    SCARCE_SUBSTITUTES_SCENARIOS,
+)
 
 if TYPE_CHECKING:
     from zen_creator.model import Model
@@ -27,6 +31,7 @@ from zen_creator import (
     AssumptionInformation,
     Attribute,
     ConversionTechnology,
+    Scenario,
     SourceInformation,
 )
 
@@ -185,7 +190,8 @@ class CarbonStorage(ConversionTechnology):
             OG_extraction_db = EnergyInstituteWorldEnergyReview(
                 source_path=self.source_path
             )
-            return OG_extraction_db.get_capacity_limit_carbon_storage(self)
+            attr = OG_extraction_db.get_capacity_limit_carbon_storage(self)
+            return self._add_reg4fuels_capacity_scenarios(attr)
         attr = self.capacity_limit
         data = cast(pd.Series, self.capacity_existing.df).groupby("node").sum()
         data.name = "capacity_limit"
@@ -203,6 +209,29 @@ class CarbonStorage(ConversionTechnology):
                     SourceInformation, self.capacity_existing.sources[-1]
                 ).metadata,
             ),
+        )
+        return self._add_reg4fuels_capacity_scenarios(attr)
+
+    def _add_reg4fuels_capacity_scenarios(self, attr: Attribute) -> Attribute:
+        """Add the Reg4Fuels low/high annual CO2-storage potentials."""
+        if not self.settings.scenario.sensitivity_reg4fuels:
+            return attr
+        potential = cast(pd.Series, attr.df)
+        annual_potential_mt = float(potential.sum()) * 8760 / 1000
+        if annual_potential_mt <= 0:
+            raise ValueError("Carbon-storage potential must be positive.")
+        low = potential * 275 / annual_potential_mt
+        high = potential * 1100 / annual_potential_mt
+        low.name = high.name = "capacity_limit"
+        attr.add_scenarios(
+            [
+                Scenario(name, df=low, suffix="low")
+                for name in SCARCE_SUBSTITUTES_SCENARIOS
+            ]
+            + [
+                Scenario(name, df=high, suffix="high")
+                for name in ABUNDANT_SUBSTITUTES_SCENARIOS
+            ]
         )
         return attr
 
