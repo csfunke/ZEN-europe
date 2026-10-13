@@ -56,7 +56,9 @@ class NuclearMaxLoad(DatasetCollection):
             ),
         }
 
-    def get_max_load(self, element: Nuclear) -> tuple[pd.DataFrame, pd.Series]:
+    def get_max_load(
+        self, element: Nuclear, end_year: int | None = None
+    ) -> tuple[pd.DataFrame, pd.Series]:
         """
         Calculate the maximum load for nuclear power plants based on historical
         generation data.
@@ -73,7 +75,7 @@ class NuclearMaxLoad(DatasetCollection):
             source_path=self.source_path,
         )
 
-        ref_year = element.settings.time.reference_year
+        ref_year = end_year or element.settings.time.reference_year
         last_entsoe_year = entsoe_db.last_entsoe_year
         if ref_year > last_entsoe_year:
             logging.info(

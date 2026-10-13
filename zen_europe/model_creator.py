@@ -15,6 +15,7 @@ from .elements.sectors import ElectricitySector  # noqa: F401
 from .elements.storage_technologies import PumpedHydro  # noqa: F401
 from .elements.transport_technologies import PowerLine  # noqa: F401
 from .global_scenarios import define_global_scenarios
+from .reg4fuels import apply_reg4fuels_extensions
 from .settings.cache import set_active_cache_settings
 
 # the data folder of the repository, which holds the configuration, the models
@@ -73,6 +74,10 @@ def create_model(
 
     # apply changes
     model.build()
+
+    # Reg4Fuels adds carrier-wide parameters that are not part of the generic
+    # ZEN-creator carrier schema.
+    apply_reg4fuels_extensions(model)
 
     # register the system-, analysis-, solver-, and set-wide scenarios
     model.apply_global_scenarios(define_global_scenarios)

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
+
+import pandas as pd
 
 from zen_europe.datasets.dataset_collections.lifetime_expectation import (
     LifetimeExpectation,
@@ -20,11 +22,17 @@ from zen_europe.datasets.datasets.technology.pan_european_climate_database impor
 from zen_europe.datasets.datasets.technology.technology_diffusion_mannhardt import (
     TechnologyDiffusionMannhardt,
 )
+from zen_europe.reg4fuels import EXPENSIVE_RENEWABLES_SCENARIOS
 
 if TYPE_CHECKING:
     from zen_creator.model import Model
 
-from zen_creator import AssumptionInformation, Attribute, ConversionTechnology
+from zen_creator import (
+    AssumptionInformation,
+    Attribute,
+    ConversionTechnology,
+    Scenario,
+)
 
 
 class Photovoltaics(ConversionTechnology):
@@ -114,7 +122,20 @@ class Photovoltaics(ConversionTechnology):
         tech_db = TechnologyCostDatabase(
             settings=self.settings, source_path=self.source_path
         )
-        return tech_db.get_capex_specific_conversion(self)
+        attr = tech_db.get_capex_specific_conversion(self)
+        if self.settings.scenario.sensitivity_reg4fuels:
+            data = pd.Series(
+                [cast(float, attr.default_value) * 1.4],
+                index=pd.Index(["CH"], name="node"),
+                name="capex_specific_conversion",
+            )
+            attr.add_scenarios(
+                [
+                    Scenario(name, df=data, suffix="CH_high")
+                    for name in EXPENSIVE_RENEWABLES_SCENARIOS
+                ]
+            )
+        return attr
 
     def _set_opex_specific_fixed(self) -> Attribute:
         """

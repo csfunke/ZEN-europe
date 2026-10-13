@@ -19,6 +19,9 @@ from zen_europe.datasets.datasets.technology.powerplantmatching import (
 from zen_europe.datasets.datasets.technology.technology_diffusion_mannhardt import (
     TechnologyDiffusionMannhardt,
 )
+from zen_europe.datasets.datasets.technology.world_nuclear_policies import (
+    WorldNuclearPolicies,
+)
 
 if TYPE_CHECKING:
     from zen_creator.model import Model
@@ -72,6 +75,16 @@ class Nuclear(ConversionTechnology):
         Sets the lifetime of nuclear.
 
         """
+        if self.settings.investment.use_extended_nuclear_lifetime:
+            return self.lifetime.set_data(
+                default_value=70,
+                source=AssumptionInformation(
+                    description=(
+                        "The nuclear lifetime is extended to 70 years for the "
+                        "Reg4Fuels assumptions."
+                    )
+                ),
+            )
         lifetime_expectation = LifetimeExpectation(
             settings=self.settings, source_path=self.source_path
         )
@@ -186,7 +199,10 @@ class Nuclear(ConversionTechnology):
             Attribute: An Attribute object containing the capacity limit data.
         """
         attr = self.capacity_limit
-        if self.settings.investment.use_nuclear_phase_out:
+        if self.settings.investment.use_current_nuclear_policies:
+            policies = WorldNuclearPolicies(self.source_path)
+            return policies.get_capacity_limit(self)
+        elif self.settings.investment.use_nuclear_phase_out:
             attr.set_data(
                 default_value=0,
                 source=AssumptionInformation(
@@ -249,7 +265,51 @@ class Nuclear(ConversionTechnology):
                 ),
                 unit="1",
             )
+        else:
+            nuclear_max_load = NuclearMaxLoad(
+                settings=self.settings,
+                set_nodes=self.model.config.system.set_nodes,
+                source_path=self.source_path,
+            )
+            nodal_ml_df, _ = nuclear_max_load.get_max_load(
+                self, end_year=self.settings.time.year_time_series
+            )
+            data = nodal_ml_df.mean(axis=0)
+            data.index.name = "node"
+            data.name = "max_load"
+            attr.set_data(
+                df=data,
+                source=SourceInformation(
+                    description=(
+                        "The non-seasonal nuclear maximum load is the nodal mean "
+                        "of historical ENTSO-E capacity factors."
+                    ),
+                    metadata=nuclear_max_load.metadata,
+                ),
+                unit="1",
+            )
         return attr
+
+    def _set_min_full_load_hours_fraction(self) -> Attribute:
+        """Set the Reg4Fuels minimum nuclear utilization assumption."""
+        if not self.settings.max_load.use_nuclear_min_full_load_hours:
+            return self.min_full_load_hours_fraction
+
+        max_load = self.max_load.df
+        data = None if max_load is None else max_load * 0.85
+        if isinstance(data, pd.Series):
+            data.name = "min_full_load_hours_fraction"
+        return self.min_full_load_hours_fraction.set_data(
+            default_value=0.85,
+            df=data,
+            unit="1",
+            source=AssumptionInformation(
+                description=(
+                    "Minimum full-load hours are set to 85% of the historical "
+                    "nuclear maximum-load factor for Reg4Fuels."
+                )
+            ),
+        )
 
     def _set_max_diffusion_rate(self) -> Attribute:
         """

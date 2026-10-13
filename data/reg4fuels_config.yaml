@@ -1,0 +1,57 @@
+# global settings
+source_path: "C:/Users/funkec/Documents/GITHUB/01_ZEN_universe/02_Data/02_ZEN_europe-reg4fuels/data/raw_data"
+
+# all settings in the system file with the exception of technology lists and
+# set_nodes. settings that are not listed keep ZEN-garden's defaults.
+system:
+  use_rolling_horizon: false
+
+# dataset-specific, type-checked settings (see zen_europe/settings/).
+# their defaults live in the category classes, so only overrides belong here.
+# a setting that controls a system value (e.g. region.set_nodes) is set here
+# and not under `system:` above; structure.* replaces the old `elements:`
+# block for the same reason.
+settings: {}
+
+# settings that go into the energy_system folder
+energy_system:
+  units:
+    base_units:
+      - hour
+      - GW
+      - km
+      - megatons
+      - megaEuro
+      - kilotCO2
+      - megavkm
+      - megatkm
+      - ktproduct
+    definitions:
+      Euro:
+        dimension: currency
+        aliases:
+          - EURO
+          - Eur
+      tCO2:
+        dimension: massCO2
+        aliases:
+          - tonCO2
+          - tonne_carbon
+      vkm:
+        dimension: mileage
+        aliases:
+          - vehicle_km
+          - vehicle_kilometer
+      tkm:
+        dimension: tonne_mileage
+        aliases:
+          - tonne_km
+          - tonne_kilometer
+      tproduct:
+        dimension: mass_product
+        aliases:
+          - tonproduct
+          - tonne_product
+  parameters_interpolation_off:
+    parameter_name:
+      - carbon_emissions_annual_limit

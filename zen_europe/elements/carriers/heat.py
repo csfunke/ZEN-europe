@@ -2,9 +2,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+#import pandas as pd
+
 if TYPE_CHECKING:
     from zen_creator import Model
 
+#from zen_creator import AssumptionInformation
 from zen_creator.elements import Carrier
 from zen_creator.utils.attribute import Attribute
 
@@ -29,6 +32,27 @@ class Heat(Carrier):
         """
         heat_demand_dataset = HeatDemand(self.settings, self.source_path)
         attr = heat_demand_dataset.get_demand(self)
+        # if self.settings.calibration.use_swiss_calibration:
+        #     demand = attr.df
+        #     if demand is None or "CH" not in demand.columns:
+        #         raise ValueError("Swiss heat demand is unavailable for calibration.")
+        #     current_demand_gwh = float(demand["CH"].sum())
+        #     target_demand_gwh = 66_300.0
+        #     years = pd.Index(self.settings.time.years, name="year")
+        #     variation = pd.Series(index=years, dtype=float)
+        #     variation.iloc[0] = 1.0
+        #     variation.iloc[-1] = target_demand_gwh / current_demand_gwh
+        #     variation = variation.interpolate(method="index")
+        #     yearly_variations = variation.to_frame(name="CH")
+        #     attr.set_data(
+        #         yearly_variations_df=yearly_variations,
+        #         source=AssumptionInformation(
+        #             description=(
+        #                 "Swiss heat demand reaches 66.3 TWh in 2050, following "
+        #                 "the Reg4Fuels Swiss calibration."
+        #             )
+        #         ),
+        #     )
         if self.settings.scenario.sensitivity_demand:
             attr.add_scenarios(demand_sensitivity_scenarios(self.name))
         return attr
