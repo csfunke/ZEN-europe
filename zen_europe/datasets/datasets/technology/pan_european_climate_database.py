@@ -374,16 +374,13 @@ class PanEuropeanClimateDatabase(Dataset[dict[str, pd.DataFrame]]):
             "PanEuropeanClimateDatabase dataset."
         )
         data = self.data[element.name]
-        capacity_nodes = element.capacity_limit.df.index
-        capacity_nodes = capacity_nodes.intersection(
-            element.model.config.system.set_nodes
-        )
-        common_nodes = data.columns.intersection(capacity_nodes)
-        missing_nodes = capacity_nodes.difference(common_nodes)
+        model_nodes = pd.Index(element.model.config.system.set_nodes)
+        common_nodes = data.columns.intersection(model_nodes)
+        missing_nodes = model_nodes.difference(common_nodes)
         if len(missing_nodes) > 0:
             logging.warning(
                 f"No max load of {element.name} in PanEuropeanClimateDatabase data "
-                "available for nodes that have capacity limits: "
+                "available for model nodes: "
                 f"{missing_nodes}"
             )
         if data.min().min() < 0 and data.max().max() > 1:
