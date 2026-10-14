@@ -13,6 +13,7 @@ from zen_europe.datasets.dataset_collections.potential_capacity_renewables impor
 from zen_europe.datasets.dataset_collections.technology_cost_database import (
     TechnologyCostDatabase,
 )
+from zen_europe.datasets.datasets.technology.ep2050 import EP2050
 from zen_europe.datasets.datasets.technology.pan_european_climate_database import (
     PanEuropeanClimateDatabase,
 )
@@ -169,7 +170,9 @@ class WindOnshore(ConversionTechnology):
             Attribute: An Attribute object containing the capacity limit data.
         """
         pcr = PotentialCapacityRenewables(source_path=self.source_path)
-        return pcr.get_capacity_limit(self)
+        attr = pcr.get_capacity_limit(self)
+        ep2050 = EP2050(source_path=self.source_path)
+        return ep2050.get_capacity_limit(self, attr)
 
     def _set_capacity_existing(self) -> Attribute:
         """
