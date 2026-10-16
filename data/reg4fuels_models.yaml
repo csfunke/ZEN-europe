@@ -1,8 +1,8 @@
 models:
-  Reg4Fuels_V18:
+  Reg4Fuels_V19:
     settings:
       output:
-        path: ../03_ZEN_data/Reg4Fuels
+        path: C:\Users\funkec\Documents\GITHUB\02_Projects\20_Reg4uels\Models_Reg4Fuels
       time:
         reference_year: 2050
         last_year: 2050
@@ -33,5 +33,5 @@ models:
         use_nuclear_min_full_load_hours: true
       scenario:
         sensitivity_reg4fuels: true
-        sensitivity_operations: true
+        sensitivity_operations: false
         sensitivity_transport_limits: true

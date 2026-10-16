@@ -1,11 +1,12 @@
 # global settings
-source_path: "C:/Users/funkec/Documents/GITHUB/01_ZEN_universe/02_Data/02_ZEN_europe-reg4fuels/data/raw_data"
+source_path: "C:/Users/funkec/Documents/GITHUB/01_ZEN_universe/04_ZEN_europe-reg4fuels/data/raw_data"
 
 # all settings in the system file with the exception of technology lists and
 # set_nodes. settings that are not listed keep ZEN-garden's defaults.
 system:
   use_rolling_horizon: false
-
+  aggregated_time_steps_per_year: 500
+  conduct_time_series_aggregation: true
 # dataset-specific, type-checked settings (see zen_europe/settings/).
 # their defaults live in the category classes, so only overrides belong here.
 # a setting that controls a system value (e.g. region.set_nodes) is set here
