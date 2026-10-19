@@ -1,0 +1,31 @@
+models:
+  Reg4Fuels_Pathway_V20:
+    settings:
+      scenario:
+        sensitivity_reg4fuels: true
+        sensitivity_operations: false
+        sensitivity_transport_limits: true
+  # Reg4Fuels_V20_pathway:
+  #   system:
+  #       aggregated_time_steps_per_year: 100
+  #   settings:
+  #     time:
+  #       reference_year: 2030
+  #       last_year: 2050
+  #       interval_between_years: 5
+  #     investment:
+  #       use_diffusion_rates: true
+  #     scenario:
+  #       sensitivity_reg4fuels: true
+  #       sensitivity_operations: false
+  #       sensitivity_transport_limits: false
+  # Reg4Fuels_V20_independence:
+  #   settings:
+  #     time:
+  #       reference_year: 2050
+  #       last_year: 2050
+  #       interval_between_years: 5
+  #     scenario:
+  #       sensitivity_reg4fuels: true
+  #       sensitivity_operations: false
+  #       sensitivity_transport_limits: true
