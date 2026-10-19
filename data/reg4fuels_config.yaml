@@ -12,7 +12,41 @@ system:
 # a setting that controls a system value (e.g. region.set_nodes) is set here
 # and not under `system:` above; structure.* replaces the old `elements:`
 # block for the same reason.
-settings: {}
+settings:
+  output:
+    path: C:\Users\funkec\Documents\GITHUB\02_Projects\20_Reg4uels\Models_Reg4Fuels
+  time:
+    reference_year: 2050
+    last_year: 2050
+    interval_between_years: 5
+    year_time_series: 2019
+  calibration:
+    use_swiss_calibration: true
+  availability:
+    allow_all_demand_shedding: true
+    allow_hydrogen_imports: true
+    use_transport_limits: true
+  data_source:
+    use_OG_carbon_storage_limit: true
+    potential_capacity_power_line: both
+  emissions:
+    use_carbon_budget: false
+    use_carbon_annual_limit: true
+  investment:
+    use_diffusion_rates: false
+    use_inf_spillover_rate: true
+    account_for_offshore_transport: true
+    use_nuclear_phase_out: false
+    cap_nuclear_capacity_to_past_investments: false
+    use_current_nuclear_policies: true
+    use_extended_nuclear_lifetime: true
+  max_load:
+    use_seasonal_nuclear_max_load: false
+    use_nuclear_min_full_load_hours: true
+  scenario:
+    sensitivity_reg4fuels: true
+    sensitivity_operations: false
+    sensitivity_transport_limits: true
 
 # settings that go into the energy_system folder
 energy_system:
