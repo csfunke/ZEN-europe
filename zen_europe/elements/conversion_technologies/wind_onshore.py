@@ -67,8 +67,11 @@ class WindOnshore(ConversionTechnology):
         """
         Set the output carrier of wind onshore to electricity.
         """
+        default_value = ["electricity"]
+        if self.model.settings.calibration.use_renewable_credits:
+            default_value.append("renewable_energy_credit")
         return Attribute(
-            name="output_carrier", default_value=["electricity"], element=self
+            name="output_carrier", default_value=default_value, element=self
         )
 
     # ---------- Required methods that are called during object build ----------
@@ -103,8 +106,13 @@ class WindOnshore(ConversionTechnology):
         The conversion factor is empty, as wind onshore has no input carrier.
         """
         attr = self.conversion_factor
+        default_value = list()
+        if self.model.settings.calibration.use_renewable_credits:
+            default_value.append(
+                {"renewable_energy_credit": {"default_value": 1, "unit": "GW/GW"}}
+            )
         return attr.set_data(
-            default_value=[],
+            default_value=default_value,
             source=AssumptionInformation(
                 description=(
                     "The conversion factor of wind onshore is manually set to an "

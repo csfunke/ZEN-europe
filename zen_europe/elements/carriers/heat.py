@@ -2,12 +2,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-#import pandas as pd
+# import pandas as pd
 
 if TYPE_CHECKING:
     from zen_creator import Model
 
-#from zen_creator import AssumptionInformation
+# from zen_creator import AssumptionInformation
 from zen_creator.elements import Carrier
 from zen_creator.utils.attribute import Attribute
 

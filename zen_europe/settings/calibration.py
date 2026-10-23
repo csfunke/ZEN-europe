@@ -9,3 +9,4 @@ class CalibrationSettings(SettingsCategory):
     name: ClassVar[str] = "calibration"
 
     use_swiss_calibration: bool = False
+    use_renewable_credits: bool = False

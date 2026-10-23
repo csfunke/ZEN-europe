@@ -47,8 +47,11 @@ class Electrolysis(ConversionTechnology):
         """
         Sets the input carrier of electrolysis to natural gas.
         """
+        default_value = ["electricity"]
+        if self.model.settings.calibration.use_renewable_credits:
+            default_value.append("renewable_energy_credit")
         return Attribute(
-            name="input_carrier", default_value=["electricity"], element=self
+            name="input_carrier", default_value=default_value, element=self
         )
 
     def _set_output_carrier(self) -> Attribute:
@@ -79,6 +82,16 @@ class Electrolysis(ConversionTechnology):
         attr = self.conversion_factor
         dea_dataset = DEA(source_path=self.source_path)
         cf = dea_dataset.get_conversion_factor_electrolysis()
+        cf_value = cf[0]["electricity"]["default_value"]
+        if self.model.settings.calibration.use_renewable_credits:
+            cf.append(
+                {
+                    "renewable_energy_credit": {
+                        "default_value": cf_value,
+                        "unit": "GW/GW",
+                    }
+                }
+            )
         source = SourceInformation(
             description=(
                 "The conversion factor of electrolysis is obtained from the DEA "

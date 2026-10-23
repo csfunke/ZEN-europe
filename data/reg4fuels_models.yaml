@@ -9,6 +9,23 @@ models:
         sensitivity_reg4fuels: true
         sensitivity_operations: false
         sensitivity_transport_limits: true
+  Reg4Fuels_V20_time_matching:
+    settings:
+      time:
+        reference_year: 2050
+        last_year: 2050
+        interval_between_years: 5
+      scenario:
+        sensitivity_reg4fuels: true
+        sensitivity_operations: false
+        sensitivity_transport_limits: true
+      calibration:
+        use_renewable_credits: true
+      structure:
+        set_carriers:
+          - renewable_energy_credit
+        set_storage_technologies:
+          - renewable_energy_credit_storage
   # Reg4Fuels_V20_pathway:
   #   system:
   #       aggregated_time_steps_per_year: 100

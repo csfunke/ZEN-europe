@@ -2,6 +2,7 @@ from .battery import Battery
 from .natural_gas_storage import NaturalGasStorage
 from .oil_storage import OilStorage
 from .pumped_hydro import PumpedHydro
+from .renewable_energy_credit_storage import RenewableEnergyCreditStorage
 from .reservoir_hydro import ReservoirHydro
 from .salt_cavern_storage import SaltCavernStorage
 
@@ -12,4 +13,5 @@ __all__ = [
     "PumpedHydro",
     "ReservoirHydro",
     "SaltCavernStorage",
+    "RenewableEnergyCreditStorage",
 ]

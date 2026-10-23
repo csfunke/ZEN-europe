@@ -22,6 +22,7 @@ from .oil import Oil
 from .olefin import Olefin
 from .passenger_mileage import PassengerMileage
 from .primary_steel import PrimarySteel
+from .renewable_energy_credit import RenewableEnergyCredit
 from .secondary_steel import SecondarySteel
 from .shipping import Shipping
 from .truck_mileage import TruckMileage
@@ -60,4 +61,5 @@ __all__ = [
     "CrudeOil",
     "FuelForCement",
     "Uranium",
+    "RenewableEnergyCredit",
 ]
