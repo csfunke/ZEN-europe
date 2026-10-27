@@ -86,7 +86,6 @@ def apply_reg4fuels_extensions(model: Model) -> None:
                 "methanol", 
                 "olefin", 
                 "electricity", 
-                "biomass",
                 "hydrogen"
             ]:
                 transport_limit_net.add_scenarios(
@@ -134,7 +133,6 @@ def apply_reg4fuels_extensions(model: Model) -> None:
                     "methanol", 
                     "olefin", 
                     "electricity", 
-                    "biomass",
                     "hydrogen"
                 ]:
                     attribute.add_scenarios(

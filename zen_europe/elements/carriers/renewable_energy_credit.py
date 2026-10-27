@@ -30,3 +30,12 @@ class RenewableEnergyCredit(Carrier):
             unit=self.power_unit,
             element=self,
         )
+
+    def _set_availability_export_yearly(self) -> Attribute:
+
+        return Attribute(
+            "availability_export_yearly",
+            default_value=np.inf,
+            unit=self.energy_unit,
+            element=self,
+        )

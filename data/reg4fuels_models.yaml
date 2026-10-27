@@ -1,10 +1,10 @@
 models:
-  Reg4Fuels_V21:
+  Reg4Fuels_V22:
     settings:
       scenario:
         sensitivity_reg4fuels: true
 
-  Reg4Fuels_V21_time_matching_annual:
+  Reg4Fuels_V22_time_matching_annual:
     settings:
       calibration:
         use_renewable_credits: true
@@ -14,7 +14,7 @@ models:
         set_storage_technologies:
           - renewable_energy_credit_storage
 
-  Reg4Fuels_V21_time_matching_exact:
+  Reg4Fuels_V22_time_matching_exact:
     settings:
       calibration:
         use_renewable_credits: true
@@ -22,22 +22,22 @@ models:
         set_carriers:
           - renewable_energy_credit
 
-  Reg4Fuels_V21_net_import_limits:
+  Reg4Fuels_V22_net_import_limits:
     settings:
       scenario:
         sensitivity_transport_limits: true
 
-  Reg4Fuels_V21_net_import_limits_winter:
+  Reg4Fuels_V22_net_import_limits_winter:
     settings:
       scenario:
         sensitivity_transport_limits: true 
 
-  Reg4Fuels_V21_net_survival:
+  Reg4Fuels_V22_net_survival:
     settings:
       scenario:
         sensitivity_net_survival: true
 
-  Reg4Fuels_V21_net_survival_winter:
+  Reg4Fuels_V22_net_survival_winter:
     settings:
       scenario:
         sensitivity_net_survival: true
