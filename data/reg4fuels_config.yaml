@@ -43,10 +43,6 @@ settings:
   max_load:
     use_seasonal_nuclear_max_load: false
     use_nuclear_min_full_load_hours: true
-  scenario:
-    sensitivity_reg4fuels: true
-    sensitivity_operations: false
-    sensitivity_transport_limits: true
 
 # settings that go into the energy_system folder
 energy_system:

@@ -40,19 +40,19 @@ EXPENSIVE_RENEWABLES_SCENARIOS = (
 
 def apply_reg4fuels_extensions(model: Model) -> None:
     """Add carrier-wide transport attributes and sensitivity scenarios."""
-    if model.settings.scenario.sensitivity_transport_limits:
-        for carrier in model.carriers.values():
-            carrier.demand.add_scenarios(
-                Scenario("increased_carrier_demand", file_op=1.1)
-            )
-        electricity = model.carriers.get("electricity")
-        if electricity is not None:
-            electricity.demand.add_scenarios(
-                Scenario("increased_electricity_demand", file_op=1.1)
-            )
+    # if model.settings.scenario.sensitivity_transport_limits:
+    #     for carrier in model.carriers.values():
+    #         carrier.demand.add_scenarios(
+    #             Scenario("increased_carrier_demand", file_op=1.1)
+    #         )
+    #     electricity = model.carriers.get("electricity")
+    #     if electricity is not None:
+    #         electricity.demand.add_scenarios(
+    #             Scenario("increased_electricity_demand", file_op=1.1)
+    #         )
 
-    if not model.settings.availability.use_transport_limits:
-        return
+    # if not model.settings.availability.use_transport_limits:
+    #     return
 
     nodes = pd.Index(model.config.system.set_nodes, name="node")
     for carrier in model.carriers.values():
@@ -81,13 +81,21 @@ def apply_reg4fuels_extensions(model: Model) -> None:
         if model.settings.scenario.sensitivity_transport_limits:
             zero_limit = pd.Series(0.0, index=nodes, name="transport_limit_net")
             transport_limit_net = vars(carrier)["transport_limit_net"]
-            transport_limit_net.add_scenarios(
-                Scenario(
-                    "net_carrier_import_limit",
-                    df=zero_limit,
-                    suffix="scenario",
+            if carrier.name in [
+                "ammonia", 
+                "methanol", 
+                "olefin", 
+                "electricity", 
+                "biomass",
+                "hydrogen"
+            ]:
+                transport_limit_net.add_scenarios(
+                    Scenario(
+                        "net_carrier_import_limit",
+                        df=zero_limit,
+                        suffix="scenario",
+                    )
                 )
-            )
             if carrier.name == "electricity":
                 transport_limit_net.add_scenarios(
                     Scenario(
@@ -96,3 +104,51 @@ def apply_reg4fuels_extensions(model: Model) -> None:
                         suffix="scenario",
                     )
                 )
+    for carrier in model.carriers.values():
+        for name in (
+            "winter_limit",
+            "backup_potential",
+        ):
+            attribute = Attribute(
+                name=name,
+                element=carrier,
+                default_value=np.inf,
+                unit=carrier.energy_unit,
+                sources=[
+                    AssumptionInformation(
+                        description=(
+                            "Carrier limit is unbounded unless a scenario "
+                            "overrides this."
+                        )
+                    )
+                ],
+            )
+            setattr(carrier, name, attribute)
+            carrier._attribute_names.append(name)
+            
+            if model.settings.scenario.sensitivity_net_survival:
+                zero_limit = pd.Series(0.0, index=nodes, name=name)
+                attribute = vars(carrier)[name]
+                if carrier.name in [
+                    "ammonia", 
+                    "methanol", 
+                    "olefin", 
+                    "electricity", 
+                    "biomass",
+                    "hydrogen"
+                ]:
+                    attribute.add_scenarios(
+                        Scenario(
+                            "net_survival_limit",
+                            df=zero_limit,
+                            suffix="scenario",
+                        )
+                    )
+                if carrier.name == "electricity":
+                    attribute.add_scenarios(
+                        Scenario(
+                            "net_electricity_survival_limit",
+                            df=zero_limit,
+                            suffix="scenario",
+                        )
+                    )

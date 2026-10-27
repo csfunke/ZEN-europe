@@ -1,24 +1,11 @@
 models:
-  Reg4Fuels_V20:
+  Reg4Fuels_V21:
     settings:
-      time:
-        reference_year: 2050
-        last_year: 2050
-        interval_between_years: 5
       scenario:
         sensitivity_reg4fuels: true
-        sensitivity_operations: false
-        sensitivity_transport_limits: true
-  Reg4Fuels_V20_time_matching:
+
+  Reg4Fuels_V21_time_matching_annual:
     settings:
-      time:
-        reference_year: 2050
-        last_year: 2050
-        interval_between_years: 5
-      scenario:
-        sensitivity_reg4fuels: true
-        sensitivity_operations: false
-        sensitivity_transport_limits: true
       calibration:
         use_renewable_credits: true
       structure:
@@ -26,6 +13,34 @@ models:
           - renewable_energy_credit
         set_storage_technologies:
           - renewable_energy_credit_storage
+
+  Reg4Fuels_V21_time_matching_exact:
+    settings:
+      calibration:
+        use_renewable_credits: true
+      structure:
+        set_carriers:
+          - renewable_energy_credit
+
+  Reg4Fuels_V21_net_import_limits:
+    settings:
+      scenario:
+        sensitivity_transport_limits: true
+
+  Reg4Fuels_V21_net_import_limits_winter:
+    settings:
+      scenario:
+        sensitivity_transport_limits: true 
+
+  Reg4Fuels_V21_net_survival:
+    settings:
+      scenario:
+        sensitivity_net_survival: true
+
+  Reg4Fuels_V21_net_survival_winter:
+    settings:
+      scenario:
+        sensitivity_net_survival: true
   # Reg4Fuels_V20_pathway:
   #   system:
   #       aggregated_time_steps_per_year: 100

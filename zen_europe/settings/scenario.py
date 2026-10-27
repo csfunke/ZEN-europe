@@ -19,3 +19,4 @@ class ScenarioSettings(SettingsCategory):
     sensitivity_reg4fuels: bool = False
     sensitivity_operations: bool = False
     sensitivity_transport_limits: bool = False
+    sensitivity_net_survival: bool = False
