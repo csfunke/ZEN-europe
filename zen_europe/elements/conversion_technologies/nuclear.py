@@ -273,7 +273,7 @@ class Nuclear(ConversionTechnology):
                 source_path=self.source_path,
             )
             nodal_ml_df, _ = nuclear_max_load.get_max_load(
-                self, end_year=self.settings.time.year_time_series
+                self, end_year=self.settings.time.time_series_year
             )
             data = nodal_ml_df.mean(axis=0)
             data.index.name = "node"

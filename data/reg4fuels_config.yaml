@@ -6,7 +6,7 @@ source_path: "C:/Users/funkec/Documents/GITHUB/01_ZEN_universe/04_ZEN_europe-reg
 system:
   use_rolling_horizon: false
   aggregated_time_steps_per_year: 500
-  conduct_time_series_aggregation: true
+  conduct_time_series_aggregation: false
 # dataset-specific, type-checked settings (see zen_europe/settings/).
 # their defaults live in the category classes, so only overrides belong here.
 # a setting that controls a system value (e.g. region.set_nodes) is set here
@@ -19,7 +19,7 @@ settings:
     reference_year: 2050
     last_year: 2050
     interval_between_years: 5
-    year_time_series: 2019
+    time_series_year: 2019
   calibration:
     use_swiss_calibration: true
   availability:
