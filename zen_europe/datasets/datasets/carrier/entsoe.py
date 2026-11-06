@@ -8,7 +8,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
-from typing import Callable, Sequence, TypeVar, cast
+from typing import Callable, ClassVar, Sequence, TypeVar, cast
 
 import pandas as pd
 import requests
@@ -23,6 +23,11 @@ from entsoe.parsers import parse_crossborder_flows, parse_generation, parse_load
 from zen_creator.datasets.datasets.dataset import Dataset
 from zen_creator.datasets.datasets.metadata import MetaData
 from zen_creator.utils.settings import Settings
+
+from zen_europe.utils.time_series import (
+    canonicalize_hourly_year,
+    require_acceptable_year,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -207,11 +212,17 @@ class ENTSOE(Dataset[pd.DataFrame]):
     under ``source_path / "02-carrier" / "entsoe"``.
 
     Requires an API security token in the ``ENTSOE_API_KEY`` environment
-    variable (generate one at https://transparency.entsoe.eu/ under "My
-    Account" -> "Web API Access").
+    variable. To obtain one, register on https://transparency.entsoe.eu/ and
+    send an email to transparency@entsoe.eu with "Restful API access" in the
+    subject line and the registered e-mail address in the body. Then log in,
+    go to "My Account Settings" and generate an API token. See
+    https://transparencyplatform.zendesk.com/hc/en-us/articles/12845911031188-How-to-get-security-token
     """
 
     name = "entsoe"
+    ACCEPTABLE_YEARS: ClassVar[tuple[int, ...]] = tuple(
+        range(2015, datetime.now().year)
+    )
 
     def __init__(
         self,
@@ -255,15 +266,17 @@ class ENTSOE(Dataset[pd.DataFrame]):
             if not api_key:
                 raise RuntimeError(
                     f"ENTSO-E API key not found. Set the {_API_KEY_ENV_VAR} "
-                    "environment variable to a security token generated at "
-                    "https://transparency.entsoe.eu/ (My Account -> Web API "
-                    "Access).\nThen, add the token to your environment variables and "
+                    "environment variable to an API token.\nTo obtain one, register "
+                    "on https://transparency.entsoe.eu/ and send an email to "
+                    "transparency@entsoe.eu with 'Restful API access' in the subject "
+                    "line and the registered e-mail address in the body. Then log in, "
+                    "go to 'My Account Settings' and generate an API token. See "
+                    "https://transparencyplatform.zendesk.com/hc/en-us/articles/"
+                    "12845911031188-How-to-get-security-token\n"
+                    "Then, add the token to your environment variables and "
                     "restart the Python process.\nYou will not need the token if you "
                     "have already have a cached dataset."
                 )
-            # the default session keeps only 10 connections per host, so with
-            # more worker threads the surplus connections would be discarded
-            # (and re-opened) after every request
             session = requests.Session()
             adapter = requests.adapters.HTTPAdapter(
                 pool_connections=1, pool_maxsize=_MAX_WORKERS
@@ -332,12 +345,20 @@ class ENTSOE(Dataset[pd.DataFrame]):
     def get_demand(self) -> pd.DataFrame:
         """Hourly electricity demand [GW] per country, for the configured
         time-series year, indexed by hour of year."""
-        demand = self._cached_query("demand", self._query_demand)
+        year = self.settings.time.time_series_year
+        require_acceptable_year(
+            year,
+            dataset_name=self.name,
+            setting_name="time_series_year",
+            acceptable_years=self.ACCEPTABLE_YEARS,
+        )
+        demand = self._cached_query(f"demand_{year}", self._query_demand)
+        demand = canonicalize_hourly_year(
+            demand, year=year, dataset_name=f"{self.name}.demand"
+        )
         demand = demand.where(demand != 0)
         demand = demand.interpolate().fillna(0)
         demand = demand / 1000  # MW -> GW
-        demand = demand.reset_index(drop=True)
-        demand.index.name = "time"
         return demand
 
     def get_generation(self, psr_type: str, year: int | None = None) -> pd.DataFrame:
@@ -349,14 +370,22 @@ class ENTSOE(Dataset[pd.DataFrame]):
             year: Year to query; defaults to `settings.time.reference_year`.
         """
         year = year if year is not None else self.last_entsoe_year
+        require_acceptable_year(
+            year,
+            dataset_name=self.name,
+            setting_name="query_year",
+            acceptable_years=self.ACCEPTABLE_YEARS,
+        )
         generation = self._cached_query(
             f"generation_{psr_type}_{year}",
             lambda: self._query_generation(psr_type, year),
         )
-        generation = generation.astype(float).interpolate()
+        generation = canonicalize_hourly_year(
+            generation.astype(float),
+            year=year,
+            dataset_name=f"{self.name}.generation.{psr_type}",
+        ).interpolate()
         generation = generation / 1000  # MW -> GW
-        generation = generation.reset_index(drop=True)
-        generation.index.name = "time"
         return generation
 
     def get_capacity_existing(
@@ -370,6 +399,12 @@ class ENTSOE(Dataset[pd.DataFrame]):
             year: Year to query; defaults to `settings.time.reference_year`.
         """
         year = year if year is not None else self.last_entsoe_year
+        require_acceptable_year(
+            year,
+            dataset_name=self.name,
+            setting_name="query_year",
+            acceptable_years=self.ACCEPTABLE_YEARS,
+        )
         capacity = self._cached_query(
             f"capacity_{psr_type}_{year}",
             lambda: self._query_capacity_existing(psr_type, year),
@@ -419,13 +454,6 @@ class ENTSOE(Dataset[pd.DataFrame]):
 
     def _query_demand(self) -> pd.DataFrame:
         year = self.settings.time.time_series_year
-        year_entsoe = self.last_entsoe_year
-        if year > year_entsoe:
-            logging.info(
-                f"Year {year} is after the last available ENTSO-E year "
-                f"{year_entsoe}. Using {year_entsoe} instead."
-            )
-            year = year_entsoe
         start, end = self._year_bounds(year)
         demand = pd.DataFrame(
             index=pd.date_range(start, end, freq="1h", inclusive="left")
@@ -467,13 +495,6 @@ class ENTSOE(Dataset[pd.DataFrame]):
         return demand
 
     def _query_generation(self, psr_type: str, year: int) -> pd.DataFrame:
-        year_entsoe = self.last_entsoe_year
-        if year > year_entsoe:
-            logging.info(
-                f"Year {year} is after the last available ENTSO-E year "
-                f"{year_entsoe}. Using {year_entsoe} instead."
-            )
-            year = year_entsoe
         start, end = self._year_bounds(year)
         generation = pd.DataFrame(
             index=pd.date_range(start, end, freq="1h", inclusive="left")
@@ -510,13 +531,6 @@ class ENTSOE(Dataset[pd.DataFrame]):
         return generation
 
     def _query_capacity_existing(self, psr_type: str, year: int) -> pd.Series:
-        year_entsoe = self.last_entsoe_year
-        if year > year_entsoe:
-            logging.info(
-                f"Year {year} is after the last available ENTSO-E year "
-                f"{year_entsoe}. Using {year_entsoe} instead."
-            )
-            year = year_entsoe
         start, end = self._year_bounds(year)
         client = self._entsoe_client
         nodes = list(self.set_nodes)
