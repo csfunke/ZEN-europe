@@ -57,9 +57,7 @@ class Olefin(Carrier):
         Return the demand of olefin.
 
         """
-        olefin_demand = OlefinDemand(
-            source_path=self.model.source_path, settings=self.settings
-        )
+        olefin_demand = OlefinDemand(source_path=self.model.source_path)
         attr = olefin_demand.get_olefin_demand(element=self)
         if self.settings.scenario.sensitivity_demand:
             attr.add_scenarios(demand_sensitivity_scenarios(self.name))

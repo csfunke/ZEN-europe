@@ -14,7 +14,6 @@ from zen_creator import (
 )
 from zen_creator.datasets.datasets.dataset import Dataset
 from zen_creator.datasets.datasets.metadata import MetaData
-from zen_creator.utils.settings import Settings
 
 from zen_europe.utils.constants import Constants
 from zen_europe.utils.utils import convert_country_names, format_capacity_existing
@@ -55,8 +54,7 @@ class IOGPCarbonStorageProjects(Dataset[pd.DataFrame]):
 
     name = "IOGP_carbon_storage_projects"
 
-    def __init__(self, settings: Settings, source_path: Path | str | None = None):
-        self.settings = settings
+    def __init__(self, source_path: Path | str | None = None) -> None:
         super().__init__(source_path=source_path)
 
     def _set_metadata(self) -> MetaData:
@@ -99,7 +97,9 @@ class IOGPCarbonStorageProjects(Dataset[pd.DataFrame]):
         return data
 
     # -------- methods ------------------------
-    def get_capacity_existing_data(self) -> pd.Series:
+    def get_capacity_existing_data(
+        self, element: ConversionTechnology | RetrofittingTechnology
+    ) -> pd.Series:
         """
         Returns the existing carbon storage capacity data from the IOGP report.
 
@@ -107,7 +107,7 @@ class IOGPCarbonStorageProjects(Dataset[pd.DataFrame]):
             pd.Series: The existing carbon storage capacity data.
         """
         projects = self.data.copy()
-        if not self.settings.investment.consider_carbon_storage_expansion:
+        if not element.settings.investment.consider_carbon_storage_expansion:
             projects = projects[projects["entry_type"] != "expansion"]
             projects = projects[projects["status"].isin(["In operation", "FID"])]
         data = projects["co2_storage_injection_capacity_mtpa"]
@@ -123,9 +123,9 @@ class IOGPCarbonStorageProjects(Dataset[pd.DataFrame]):
         """
         Returns the existing carbon storage capacity from the IOGP report.
         """
-        data = self.get_capacity_existing_data()
-        if not self.settings.investment.set_future_CCS_investments:
-            reference_year = self.settings.time.reference_year
+        data = self.get_capacity_existing_data(element)
+        if not element.settings.investment.set_future_CCS_investments:
+            reference_year = element.settings.time.reference_year
             data = data[
                 data.index.get_level_values("year_construction") <= reference_year - 1
             ]

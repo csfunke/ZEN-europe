@@ -9,7 +9,6 @@ import pytz
 from zen_creator import Element
 from zen_creator.datasets.datasets.dataset import Dataset
 from zen_creator.datasets.datasets.metadata import MetaData
-from zen_creator.utils.settings import Settings
 
 from zen_europe.utils.constants import Constants
 from zen_europe.utils.time_series import require_acceptable_year
@@ -29,16 +28,7 @@ class StandardLoadProfiles(Dataset[dict[str, pd.DataFrame]]):
     name = "standard_load_profiles"
     ACCEPTABLE_YEARS: ClassVar[tuple[int, ...]] = (2019, 2020)
 
-    def __init__(
-        self, settings: Settings, source_path: Path | str | None = None
-    ) -> None:
-        self.settings = settings
-        require_acceptable_year(
-            settings.time.time_series_year,
-            dataset_name=self.name,
-            setting_name="time_series_year",
-            acceptable_years=self.ACCEPTABLE_YEARS,
-        )
+    def __init__(self, source_path: Path | str | None = None) -> None:
         super().__init__(source_path=source_path)
 
     def _set_metadata(self) -> MetaData:

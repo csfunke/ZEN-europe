@@ -20,7 +20,6 @@ if TYPE_CHECKING:
 import numpy as np
 from zen_creator import Attribute, Carrier, ConversionTechnology, DatasetCollection
 from zen_creator.utils.attribute import SourceInformation
-from zen_creator.utils.settings import Settings
 
 from zen_europe.datasets.datasets.carrier.eurostat import Eurostat
 from zen_europe.datasets.datasets.carrier.statistical_pocketbook_transport import (
@@ -33,8 +32,7 @@ class TruckMileageDemand(DatasetCollection):
 
     name = "truck_mileage_demand"
 
-    def __init__(self, settings: Settings, source_path: Path | str):
-        self.settings = settings
+    def __init__(self, source_path: Path | str | None = None) -> None:
         super().__init__(source_path=source_path)
 
     def _get_data(self) -> Dict[str, Dataset[Any]]:
@@ -44,13 +42,11 @@ class TruckMileageDemand(DatasetCollection):
             raise ValueError("source_path must be set to load the dataset collection.")
 
         return {
-            "eurostat": Eurostat(self.settings, self.source_path),
+            "eurostat": Eurostat(self.source_path),
             "statistical_pocketbook_transport": StatisticalPocketbookTransport(
-                self.settings, self.source_path
+                self.source_path
             ),
-            "truck_standard_load_profiles": TruckStandardLoadProfiles(
-                self.settings, self.source_path
-            ),
+            "truck_standard_load_profiles": TruckStandardLoadProfiles(self.source_path),
             "truck_technologies": TruckTechnologiesICCT(self.source_path),
         }
 

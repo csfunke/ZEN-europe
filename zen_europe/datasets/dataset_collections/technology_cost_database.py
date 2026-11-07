@@ -30,7 +30,6 @@ from zen_creator import (
     Technology,
 )
 from zen_creator.utils.attribute import SourceInformation
-from zen_creator.utils.settings import Settings
 
 from zen_europe.datasets.datasets.financial._cost_schema import (
     CO2_BASIS_UNITS,
@@ -84,8 +83,7 @@ class TechnologyCostDatabase(DatasetCollection):
 
     name = "technology_cost_database"
 
-    def __init__(self, settings: Settings, source_path: Path | str):
-        self.settings = settings
+    def __init__(self, source_path: Path | str | None = None) -> None:
         self._rows_cache: dict[tuple[str, str, str | None], pd.DataFrame] = {}
         super().__init__(source_path=source_path)
         self._inflation = ECBInflation(source_path=self.source_path)
@@ -332,7 +330,8 @@ class TechnologyCostDatabase(DatasetCollection):
             "efficiency",
             plant_size,
             metric,
-            reference_year or self.settings.time.reference_year,
+            reference_year or element.settings.time.reference_year,
+            element.settings.time.price_year,
         )
         optimization_years = pd.Index(element.settings.time.years)
         data = self._reindex_to_years(data, optimization_years)
@@ -360,17 +359,19 @@ class TechnologyCostDatabase(DatasetCollection):
     def export_cost_table(
         self,
         path: Path,
+        *,
+        reference_year: int,
+        price_year: int,
         technologies: list[str] | None = None,
         plant_size: str | None = None,
-        reference_year: int | None = None,
     ) -> pd.DataFrame:
         """Export a min/mean/max cost table (capex, fopex, vopex) to Excel.
 
         This is the numeric-export counterpart of the legacy script's
         `save_cost_curves`; the matplotlib `plot_cost_curves` figure export
-        was intentionally not ported.
+        was intentionally not ported. Years are explicit because this helper
+        has no model element from which to derive settings.
         """
-        reference_year = reference_year or self.settings.time.reference_year
         if technologies is None:
             technologies = sorted(self._available_technologies())
 
@@ -380,7 +381,12 @@ class TechnologyCostDatabase(DatasetCollection):
             for variable in COST_VARIABLES:
                 for metric in ("min", "mean", "max"):
                     series = self._aggregate(
-                        technology, variable, plant_size, metric, reference_year
+                        technology,
+                        variable,
+                        plant_size,
+                        metric,
+                        reference_year,
+                        price_year,
                     )
                     if series.empty:
                         continue
@@ -412,7 +418,12 @@ class TechnologyCostDatabase(DatasetCollection):
         else:
             element_name = element.name
         series = self._aggregate(
-            element_name, variable, plant_size, metric, reference_year
+            element_name,
+            variable,
+            plant_size,
+            metric,
+            reference_year,
+            element.settings.time.price_year,
         )
         agencies = self._extract_agencies(element_name, variable, plant_size)
         if series.empty:
@@ -422,7 +433,7 @@ class TechnologyCostDatabase(DatasetCollection):
             )
 
         optimization_years = pd.Index(element.settings.time.years)
-        if not self.settings.cost.use_learning_curves:
+        if not element.settings.cost.use_learning_curves:
             # the cost stays at the value of the reference year in all years
             default_value = float(
                 self._reindex_to_years(series, pd.Index([reference_year])).loc[
@@ -508,7 +519,7 @@ class TechnologyCostDatabase(DatasetCollection):
                 f"{metric} across all available data for the agencies "
                 f"{', '.join(agencies)} reporting data for this technology at plant "
                 f"size '{plant_size}'. Monetary values are rebased to "
-                f"{self.settings.time.price_year} "
+                f"{element.settings.time.price_year} "
                 f"Euro using ECB HICP inflation.{rebasing}"
             ),
             metadata=self.metadata,
@@ -528,6 +539,7 @@ class TechnologyCostDatabase(DatasetCollection):
         plant_size: str | None,
         metric: str,
         reference_year: int,
+        price_year: int,
     ) -> pd.Series:
         """Aggregate `variable` for `technology` across agencies/scenarios.
 
@@ -548,7 +560,7 @@ class TechnologyCostDatabase(DatasetCollection):
                 value=[
                     value
                     * self._inflation.get_inflation_rate(
-                        int(money_year_src), self.settings.time.price_year
+                        int(money_year_src), price_year
                     )
                     for value, money_year_src in zip(
                         rows["value"], rows["money_year_src"], strict=True
@@ -741,7 +753,12 @@ class TechnologyCostDatabase(DatasetCollection):
         """Aggregated `variable` for `element`, on the optimization-year grid."""
         reference_year = element.settings.time.reference_year
         series = self._aggregate(
-            element.name, variable, plant_size, metric, reference_year
+            element.name,
+            variable,
+            plant_size,
+            metric,
+            reference_year,
+            element.settings.time.price_year,
         )
         if series.empty:
             raise ValueError(
@@ -821,7 +838,7 @@ class TechnologyCostDatabase(DatasetCollection):
         reference_year = element.settings.time.reference_year
         at_reference_year = self._reindex_to_years(delta, pd.Index([reference_year]))
         default_value = float(at_reference_year.loc[reference_year])
-        if not self.settings.cost.use_learning_curves:
+        if not element.settings.cost.use_learning_curves:
             # the cost stays at the value of the reference year in all years
             df = None
             yearly_variations = None
@@ -848,7 +865,7 @@ class TechnologyCostDatabase(DatasetCollection):
                 f"coupling factor ({coupling_factor.default_value:.4g} "
                 f"{coupling_factor.unit}) to express it per unit of captured "
                 f"CO2. Monetary values are rebased to "
-                f"{self.settings.time.price_year} Euro "
+                f"{element.settings.time.price_year} Euro "
                 f"using ECB HICP inflation."
             ),
             metadata=self.metadata,

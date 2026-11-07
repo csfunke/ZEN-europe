@@ -12,7 +12,6 @@ if TYPE_CHECKING:
 
 from zen_creator import Attribute, DatasetCollection
 from zen_creator.utils.attribute import SourceInformation
-from zen_creator.utils.settings import Settings
 
 from zen_europe.datasets.datasets.carrier.entsog import (
     ENTSOG,
@@ -30,8 +29,7 @@ class NaturalGasAvailability(DatasetCollection):
 
     name = "natural_gas_availability"
 
-    def __init__(self, source_path: Path | str, settings: Settings):
-        self.settings = settings
+    def __init__(self, source_path: Path | str | None = None) -> None:
         super().__init__(source_path=source_path)
 
     def _get_data(self) -> Dict[str, Dataset[Any]]:
@@ -45,7 +43,7 @@ class NaturalGasAvailability(DatasetCollection):
             "entsogTCM": ENTSOGTransmissionCapacityMap(self.source_path),
             "entsog": ENTSOG(self.source_path),
             "import_increase_gas": ImportIncreaseGas(self.source_path),
-            "eurostat": Eurostat(source_path=self.source_path, settings=self.settings),
+            "eurostat": Eurostat(source_path=self.source_path),
         }
 
     def get_availability_import(self, element: Carrier) -> Attribute:
@@ -141,7 +139,8 @@ class NaturalGasAvailability(DatasetCollection):
         # add domestic production from Eurostat
         eurostat_dataset = cast(Eurostat, self.data["eurostat"])
         domestic_production = (
-            eurostat_dataset.get_natural_gas_production() / Constants.HOURS_PER_YEAR
+            eurostat_dataset.get_natural_gas_production(element)
+            / Constants.HOURS_PER_YEAR
         )
         missing_countries = pd.Index(element.model.config.system.set_nodes).difference(
             domestic_production.index

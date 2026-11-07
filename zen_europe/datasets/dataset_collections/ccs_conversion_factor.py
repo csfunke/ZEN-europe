@@ -23,7 +23,6 @@ from zen_creator import (
     RetrofittingTechnology,
     SourceInformation,
 )
-from zen_creator.utils.settings import Settings
 
 
 class CCSConversionFactor(DatasetCollection):
@@ -33,8 +32,7 @@ class CCSConversionFactor(DatasetCollection):
 
     name = "ccs_conversion_factor"
 
-    def __init__(self, settings: Settings, source_path: Path | str):
-        self.settings = settings
+    def __init__(self, source_path: Path | str | None = None) -> None:
         super().__init__(source_path=source_path)
 
     def _get_data(self) -> Dict[str, Dataset[Any] | DatasetCollection]:
@@ -45,9 +43,7 @@ class CCSConversionFactor(DatasetCollection):
 
         return {
             "dea": DEA(self.source_path),
-            "technology_cost_database": TechnologyCostDatabase(
-                self.settings, self.source_path
-            ),
+            "technology_cost_database": TechnologyCostDatabase(self.source_path),
             "ipcc_emission_factors": IPCCEmissionFactors(self.source_path),
         }
 

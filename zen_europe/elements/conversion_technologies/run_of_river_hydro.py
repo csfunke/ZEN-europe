@@ -91,9 +91,7 @@ class RunOfRiverHydro(ConversionTechnology):
                 ),
             )
         else:
-            lifetime_expectation = LifetimeExpectation(
-                settings=self.settings, source_path=self.source_path
-            )
+            lifetime_expectation = LifetimeExpectation(source_path=self.source_path)
             return lifetime_expectation.get_lifetime(self)
 
     def _set_construction_time(self) -> Attribute:
@@ -102,9 +100,7 @@ class RunOfRiverHydro(ConversionTechnology):
 
         """
         if self.settings.investment.use_construction_times:
-            tech_db = TechnologyCostDatabase(
-                settings=self.settings, source_path=self.source_path
-            )
+            tech_db = TechnologyCostDatabase(source_path=self.source_path)
             return tech_db.get_construction_time(self)
         else:
             return self.construction_time
@@ -133,9 +129,7 @@ class RunOfRiverHydro(ConversionTechnology):
         Returns:
             Attribute: An Attribute object containing the specific capex data.
         """
-        tech_db = TechnologyCostDatabase(
-            settings=self.settings, source_path=self.source_path
-        )
+        tech_db = TechnologyCostDatabase(source_path=self.source_path)
         return tech_db.get_capex_specific_conversion(self)
 
     def _set_opex_specific_fixed(self) -> Attribute:
@@ -145,9 +139,7 @@ class RunOfRiverHydro(ConversionTechnology):
         Returns:
             Attribute: An Attribute object containing the specific fixed opex data.
         """
-        tech_db = TechnologyCostDatabase(
-            settings=self.settings, source_path=self.source_path
-        )
+        tech_db = TechnologyCostDatabase(source_path=self.source_path)
         return tech_db.get_opex_specific_fixed(self)
 
     def _set_opex_specific_variable(self) -> Attribute:
@@ -158,9 +150,7 @@ class RunOfRiverHydro(ConversionTechnology):
         Returns:
             Attribute: An Attribute object containing the specific variable opex data.
         """
-        tech_db = TechnologyCostDatabase(
-            settings=self.settings, source_path=self.source_path
-        )
+        tech_db = TechnologyCostDatabase(source_path=self.source_path)
         return tech_db.get_opex_specific_variable(self)
 
     def _set_capacity_limit(self) -> Attribute:
@@ -215,7 +205,6 @@ class RunOfRiverHydro(ConversionTechnology):
                 attr = hydro_capacity.get_capacity_existing(self)
             else:
                 hydro_capacities = HydropowerExistingCapacities(
-                    settings=self.settings,
                     source_path=self.source_path,
                 )
                 attr = hydro_capacities.get_capacity_existing(self)
@@ -239,7 +228,6 @@ class RunOfRiverHydro(ConversionTechnology):
             Attribute: An Attribute object containing the maximum load data.
         """
         hydropower_data = HydropowerExistingCapacities(
-            settings=self.settings,
             source_path=self.source_path,
         )
         return hydropower_data.get_max_load_ror_hydro(self)

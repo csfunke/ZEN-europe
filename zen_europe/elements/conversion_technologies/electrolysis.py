@@ -66,9 +66,7 @@ class Electrolysis(ConversionTechnology):
         Sets the lifetime of electrolysis.
 
         """
-        tech_db = TechnologyCostDatabase(
-            settings=self.settings, source_path=self.source_path
-        )
+        tech_db = TechnologyCostDatabase(source_path=self.source_path)
         return tech_db.get_lifetime(self)
 
     def _set_conversion_factor(self) -> Attribute:
@@ -95,9 +93,7 @@ class Electrolysis(ConversionTechnology):
 
         """
         if self.settings.investment.use_construction_times:
-            tech_db = TechnologyCostDatabase(
-                settings=self.settings, source_path=self.source_path
-            )
+            tech_db = TechnologyCostDatabase(source_path=self.source_path)
             return tech_db.get_construction_time(self)
         else:
             return self.construction_time
@@ -116,9 +112,7 @@ class Electrolysis(ConversionTechnology):
         Returns:
             Attribute: An Attribute object containing the specific capex data.
         """
-        tech_db = TechnologyCostDatabase(
-            settings=self.settings, source_path=self.source_path
-        )
+        tech_db = TechnologyCostDatabase(source_path=self.source_path)
         cf = self._electricity_conversion_factor()
         attr = tech_db.get_capex_specific_conversion(self)
         if attr.df is not None:
@@ -136,9 +130,7 @@ class Electrolysis(ConversionTechnology):
         Returns:
             Attribute: An Attribute object containing the specific fixed opex data.
         """
-        tech_db = TechnologyCostDatabase(
-            settings=self.settings, source_path=self.source_path
-        )
+        tech_db = TechnologyCostDatabase(source_path=self.source_path)
         cf = self._electricity_conversion_factor()
         attr = tech_db.get_opex_specific_fixed(self)
         if attr.df is not None:
@@ -156,9 +148,7 @@ class Electrolysis(ConversionTechnology):
         Returns:
             Attribute: An Attribute object containing the specific variable opex data.
         """
-        tech_db = TechnologyCostDatabase(
-            settings=self.settings, source_path=self.source_path
-        )
+        tech_db = TechnologyCostDatabase(source_path=self.source_path)
         cf = self._electricity_conversion_factor()
         attr = tech_db.get_opex_specific_variable(self)
         if attr.df is not None:

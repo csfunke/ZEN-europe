@@ -27,7 +27,7 @@ class Heat(Carrier):
         Return the demand of the carrier.
 
         """
-        heat_demand_dataset = HeatDemand(self.settings, self.source_path)
+        heat_demand_dataset = HeatDemand(self.source_path)
         attr = heat_demand_dataset.get_demand(self)
         if self.settings.scenario.sensitivity_demand:
             attr.add_scenarios(demand_sensitivity_scenarios(self.name))

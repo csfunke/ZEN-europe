@@ -92,9 +92,7 @@ class HDT_BET(ConversionTechnology):
         Sets the specific conversion CAPEX of HDT BET.
 
         """
-        vehicle_capacity = ExistingVehicleCapacity(
-            settings=self.model.settings, source_path=self.source_path
-        )
+        vehicle_capacity = ExistingVehicleCapacity(source_path=self.source_path)
         return vehicle_capacity.get_capex_specific_conversion_truck(element=self)
 
     def _set_capacity_existing(self) -> Attribute:
@@ -103,9 +101,7 @@ class HDT_BET(ConversionTechnology):
 
         """
         if self.settings.investment.use_existing_capacities:
-            vehicle_capacity = ExistingVehicleCapacity(
-                settings=self.model.settings, source_path=self.source_path
-            )
+            vehicle_capacity = ExistingVehicleCapacity(source_path=self.source_path)
             ex_cap = vehicle_capacity.get_existing_capacity_truck(element=self)
             attr = self.capacity_existing
             return attr.set_data(
@@ -139,9 +135,7 @@ class HDT_BET(ConversionTechnology):
         Sets the maximum load of HDT BET.
 
         """
-        truck_transport_db = TruckMileageDemand(
-            settings=self.model.settings, source_path=self.source_path
-        )
+        truck_transport_db = TruckMileageDemand(source_path=self.source_path)
 
         return truck_transport_db.get_max_load(element=self)
 

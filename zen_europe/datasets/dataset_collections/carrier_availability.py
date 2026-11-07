@@ -12,7 +12,6 @@ if TYPE_CHECKING:
 
 from zen_creator import Attribute, Carrier, DatasetCollection, Element
 from zen_creator.utils.attribute import SourceInformation
-from zen_creator.utils.settings import Settings
 
 from zen_europe.datasets.datasets.carrier.eurostat import Eurostat
 from zen_europe.datasets.datasets.carrier.swiss_energy_balance import (
@@ -30,8 +29,7 @@ class CarrierAvailability(DatasetCollection):
 
     name = "carrier_availability"
 
-    def __init__(self, settings: Settings, source_path: Path | str):
-        self.settings = settings
+    def __init__(self, source_path: Path | str | None = None) -> None:
         super().__init__(source_path=source_path)
 
     def _get_data(self) -> Dict[str, Dataset[Any]]:
@@ -41,7 +39,7 @@ class CarrierAvailability(DatasetCollection):
             raise ValueError("source_path must be set to load the dataset collection.")
 
         return {
-            "eurostat": Eurostat(settings=self.settings, source_path=self.source_path),
+            "eurostat": Eurostat(source_path=self.source_path),
             "swiss_energy_balance": SwissEnergyBalance(source_path=self.source_path),
             "swiss_oil_balance": SwissOilBalance(source_path=self.source_path),
             "shipping_technologies_korberg": ShippingTechnologiesKorberg(
@@ -59,7 +57,7 @@ class CarrierAvailability(DatasetCollection):
         swiss_energy_balance_dataset = cast(
             SwissEnergyBalance, self.data["swiss_energy_balance"]
         )
-        data = eurostat_dataset.get_coal_availability()[element.name]
+        data = eurostat_dataset.get_coal_availability(element)[element.name]
         assert not data.empty, "Coal availability data from Eurostat is empty."
         common_countries = data.index.intersection(
             element.model.config.system.set_nodes
@@ -120,7 +118,7 @@ class CarrierAvailability(DatasetCollection):
             SwissEnergyBalance, self.data["swiss_energy_balance"]
         )
         data = eurostat_dataset.get_waste_availability(
-            include_industry=include_industry
+            element, include_industry=include_industry
         )
         assert not data.empty, "Waste availability data from Eurostat is empty."
         common_countries = data.index.intersection(
@@ -176,7 +174,7 @@ class CarrierAvailability(DatasetCollection):
         swiss_energy_balance_dataset = cast(
             SwissEnergyBalance, self.data["swiss_energy_balance"]
         )
-        data = eurostat_dataset.get_oil_availability()
+        data = eurostat_dataset.get_oil_availability(element)
         assert not data.empty, "Oil availability data from Eurostat is empty."
         common_countries = data.index.intersection(
             element.model.config.system.set_nodes
@@ -229,7 +227,7 @@ class CarrierAvailability(DatasetCollection):
         swiss_oil_balance_dataset = cast(
             SwissOilBalance, self.data["swiss_oil_balance"]
         )
-        data = eurostat_dataset.get_kerosene_demand()
+        data = eurostat_dataset.get_kerosene_demand(element)
         assert not data.empty, "Kerosene demand data from Eurostat is empty."
         common_countries = data.index.intersection(
             element.model.config.system.set_nodes
@@ -288,7 +286,7 @@ class CarrierAvailability(DatasetCollection):
         shipping_technologies_korberg_dataset = cast(
             ShippingTechnologiesKorberg, self.data["shipping_technologies_korberg"]
         )
-        data = eurostat_dataset.get_shipping_fuel_demand()
+        data = eurostat_dataset.get_shipping_fuel_demand(element)
         assert not data.empty, "Shipping fuel demand data from Eurostat is empty."
         common_countries = data.index.intersection(
             element.model.config.system.set_nodes

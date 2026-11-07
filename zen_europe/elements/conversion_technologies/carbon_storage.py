@@ -159,9 +159,7 @@ class CarbonStorage(ConversionTechnology):
             Attribute: An Attribute object containing the existing capacity data.
         """
         if self.settings.investment.use_existing_capacities:
-            igop_projects = IOGPCarbonStorageProjects(
-                settings=self.settings, source_path=self.source_path
-            )
+            igop_projects = IOGPCarbonStorageProjects(source_path=self.source_path)
             return igop_projects.get_capacity_existing(self)
         else:
             attr = self.capacity_existing
@@ -223,10 +221,8 @@ class CarbonStorage(ConversionTechnology):
             Attribute: An Attribute object containing the unbounded capacity addition
                 data.
         """
-        iogp_projects = IOGPCarbonStorageProjects(
-            settings=self.settings, source_path=self.source_path
-        )
-        data = iogp_projects.get_capacity_existing_data()
+        iogp_projects = IOGPCarbonStorageProjects(source_path=self.source_path)
+        data = iogp_projects.get_capacity_existing_data(self)
         median_add = data.median()
         # n_nodes = len(data.index.get_level_values("node").unique())
         # addition = median_add / n_nodes

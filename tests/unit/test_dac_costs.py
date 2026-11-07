@@ -58,7 +58,7 @@ def _cost_by_year(attribute) -> pd.Series:
 
 
 def _dac_costs(model: Model) -> DACCosts:
-    return DACCosts(settings=model.settings, source_path=model.source_path)
+    return DACCosts(source_path=model.source_path)
 
 
 def test_settings_match_the_datasets() -> None:

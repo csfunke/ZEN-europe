@@ -219,12 +219,6 @@ def _generate_in_process(
     resolved: dict[str, Settings], args: argparse.Namespace, models_path: Path
 ) -> None:
     """Generate the models one after another in this process."""
-    logger.warning(
-        "Generating the models in this process, so they share the datasets "
-        "that have already been loaded. Drop --sequential to generate each "
-        "model in its own process."
-    )
-
     for name in resolved:
         logger.info(f"Generating model '{name}' ...")
         model = create_model(

@@ -17,7 +17,6 @@ if TYPE_CHECKING:
 
 from zen_creator import Attribute, DatasetCollection
 from zen_creator.utils.attribute import SourceInformation
-from zen_creator.utils.settings import Settings
 
 
 class LifetimeExpectation(DatasetCollection):
@@ -29,8 +28,7 @@ class LifetimeExpectation(DatasetCollection):
 
     name = "lifetime_expectation"
 
-    def __init__(self, settings: Settings, source_path: Path | str):
-        self.settings = settings
+    def __init__(self, source_path: Path | str | None = None) -> None:
         super().__init__(source_path=source_path)
 
     def _get_data(self) -> Dict[str, Dataset[Any] | DatasetCollection]:
@@ -40,7 +38,7 @@ class LifetimeExpectation(DatasetCollection):
             raise ValueError("source_path must be set to load the dataset collection.")
 
         return {
-            "tech_db": TechnologyCostDatabase(self.settings, self.source_path),
+            "tech_db": TechnologyCostDatabase(self.source_path),
             "powerplantmatching": PowerPlantMatching(self.source_path),
         }
 

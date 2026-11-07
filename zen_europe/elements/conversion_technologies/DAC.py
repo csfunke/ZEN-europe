@@ -64,9 +64,7 @@ class DAC(ConversionTechnology):
         Sets the lifetime of DAC.
 
         """
-        tech_db = TechnologyCostDatabase(
-            settings=self.settings, source_path=self.source_path
-        )
+        tech_db = TechnologyCostDatabase(source_path=self.source_path)
         return tech_db.get_lifetime(self)
 
     def _set_conversion_factor(self) -> Attribute:
@@ -95,9 +93,7 @@ class DAC(ConversionTechnology):
 
         """
         if self.settings.investment.use_construction_times:
-            tech_db = TechnologyCostDatabase(
-                settings=self.settings, source_path=self.source_path
-            )
+            tech_db = TechnologyCostDatabase(source_path=self.source_path)
             return tech_db.get_construction_time(self)
         else:
             return self.construction_time
@@ -138,10 +134,8 @@ class DAC(ConversionTechnology):
         projections.
         """
         if self.settings.cost.dac_cost_source == "sievert":
-            return DACCosts(settings=self.settings, source_path=self.source_path)
-        return TechnologyCostDatabase(
-            settings=self.settings, source_path=self.source_path
-        )
+            return DACCosts(source_path=self.source_path)
+        return TechnologyCostDatabase(source_path=self.source_path)
 
     def _set_capacity_existing(self) -> Attribute:
         """
@@ -151,9 +145,7 @@ class DAC(ConversionTechnology):
             Attribute: An Attribute object containing the existing capacity data.
         """
         if self.settings.investment.use_existing_capacities:
-            dac_db = DACCapacitiesZurbriggen(
-                settings=self.settings, source_path=self.source_path
-            )
+            dac_db = DACCapacitiesZurbriggen(source_path=self.source_path)
             return dac_db.get_capacity_existing(self)
         else:
             attr = self.capacity_existing
@@ -183,9 +175,7 @@ class DAC(ConversionTechnology):
             Attribute: An Attribute object containing the unbounded capacity addition
                 data.
         """
-        dac_db = DACCapacitiesZurbriggen(
-            settings=self.settings, source_path=self.source_path
-        )
+        dac_db = DACCapacitiesZurbriggen(source_path=self.source_path)
         data = (
             dac_db.data[["node", "year_construction", "Capacity"]]
             .groupby(["node", "year_construction"])["Capacity"]

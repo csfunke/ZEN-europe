@@ -13,9 +13,9 @@ from typing import Any, Callable, ClassVar, Union, cast
 import eurostat as es
 import pandas as pd
 import requests
+from zen_creator import Element
 from zen_creator.datasets.datasets.dataset import Dataset
 from zen_creator.datasets.datasets.metadata import MetaData
-from zen_creator.utils.settings import Settings
 
 from zen_europe.utils.constants import Constants
 from zen_europe.utils.time_series import require_acceptable_year
@@ -188,28 +188,10 @@ class Eurostat(Dataset[pd.DataFrame]):
         range(_EUROSTAT_START_YEAR, datetime.now().year)
     )
 
-    def __init__(self, settings: Settings, source_path: Path | str | None = None):
-        self.settings = settings
-        self.source_path = Path(source_path) if source_path is not None else None
-
-        require_acceptable_year(
-            self.settings.time.time_series_year,
-            dataset_name=self.name,
-            setting_name="time_series_year",
-            acceptable_years=self.ACCEPTABLE_YEARS,
-        )
-
-        last_eurostat_year = self._get_latest_year("nrg_bal_c")
-        eurostat_year = min(last_eurostat_year, self.settings.time.reference_year - 1)
-        if self.settings.time.reference_year - 1 > last_eurostat_year:
-            logging.info(
-                f"Reference year {self.settings.time.reference_year} is after the last"
-                f"available Eurostat year {last_eurostat_year}. "
-                f"Using {eurostat_year} instead."
-            )
-        self.eurostat_year = eurostat_year
-        self.eurostat_time_series_year = self.settings.time.time_series_year
-
+    def __init__(self, source_path: Path | str | None = None) -> None:
+        self.eurostat_year = 0
+        self.eurostat_time_series_year = 0
+        self._overwrite = False
         super().__init__(source_path=source_path)
 
     def _set_metadata(self) -> MetaData:
@@ -227,6 +209,20 @@ class Eurostat(Dataset[pd.DataFrame]):
 
     def _set_data(self) -> pd.DataFrame:
         return pd.DataFrame()  # placeholder, actual data is queried on demand
+
+    def _prepare_request(self, element: Element) -> None:
+        """Resolve request years and overwrite behavior from the current element."""
+        settings = element.settings
+        require_acceptable_year(
+            settings.time.time_series_year,
+            dataset_name=self.name,
+            setting_name="time_series_year",
+            acceptable_years=self.ACCEPTABLE_YEARS,
+        )
+        self._overwrite = settings.cache.overwrite_eurostat
+        latest = self._get_latest_year("nrg_bal_c")
+        self.eurostat_year = min(latest, settings.time.reference_year - 1)
+        self.eurostat_time_series_year = settings.time.time_series_year
 
     # -------- disk cache ------------------
 
@@ -253,7 +249,7 @@ class Eurostat(Dataset[pd.DataFrame]):
         cache_path = (
             self.source_path / "02-carrier" / "eurostat" / f"{dataset}_data_end.json"
         )
-        if cache_path.exists() and not self.settings.cache.overwrite_eurostat:
+        if cache_path.exists() and not self._overwrite:
             logger.info(f"Loading cached Eurostat metadata from {cache_path}")
             cached = json.loads(cache_path.read_text())
             if not isinstance(cached, int):
@@ -294,7 +290,7 @@ class Eurostat(Dataset[pd.DataFrame]):
         path = (
             Path(self.source_path) / "02-carrier" / "eurostat" / f"{dataset}_{par}.json"
         )
-        if path.exists() and not self.settings.cache.overwrite_eurostat:
+        if path.exists() and not self._overwrite:
             return json.loads(path.read_text())
 
         values = es.get_par_values(dataset, par)
@@ -321,7 +317,7 @@ class Eurostat(Dataset[pd.DataFrame]):
         """
         data_path, meta_path = self._cache_paths(name)
 
-        overwrite = self.settings.cache.overwrite_eurostat
+        overwrite = self._overwrite
         if data_path.exists() != meta_path.exists() and not overwrite:
             existing = data_path if data_path.exists() else meta_path
             missing = meta_path if data_path.exists() else data_path
@@ -398,76 +394,91 @@ class Eurostat(Dataset[pd.DataFrame]):
     # -------- outward-facing accessors ------------------
 
     @instance_cache
-    def get_efficiencies(self) -> pd.Series:
+    def get_efficiencies(self, element: Element) -> pd.Series:
         """Fleet efficiency (output/input) per technology, at the latest
         available Eurostat year."""
+        self._prepare_request(element)
         return self._query_efficiencies()
 
     @instance_cache
-    def get_electricity_generation(self) -> pd.Series:
+    def get_electricity_generation(self, element: Element) -> pd.Series:
         """Gross electricity generation per country, at the latest
         available Eurostat year."""
+        self._prepare_request(element)
         return self._query_electricity_generation()
 
     @instance_cache
-    def get_total_heat_household(self) -> pd.DataFrame:
+    def get_total_heat_household(self, element: Element) -> pd.DataFrame:
         """Heat consumption per node."""
+        self._prepare_request(element)
         return self._query_total_heat_household()
 
     @instance_cache
-    def get_heat_household_technology(self) -> pd.DataFrame:
+    def get_heat_household_technology(self, element: Element) -> pd.DataFrame:
         """Household heat consumption per technology/node."""
+        self._prepare_request(element)
         return self._query_heat_household_technology()
 
     @instance_cache
-    def get_heat_dh_technology(self) -> pd.DataFrame:
+    def get_heat_dh_technology(self, element: Element) -> pd.DataFrame:
         """District heat consumption per technology/node."""
+        self._prepare_request(element)
         return self._query_heat_dh_technology()
 
     @instance_cache
-    def get_coal_availability(self) -> pd.DataFrame:
+    def get_coal_availability(self, element: Element) -> pd.DataFrame:
         """Coal availability per node."""
+        self._prepare_request(element)
         return self._query_coal_availability()
 
     @instance_cache
-    def get_oil_availability(self) -> pd.Series:
+    def get_oil_availability(self, element: Element) -> pd.Series:
         """Oil availability per node."""
+        self._prepare_request(element)
         return self._query_oil_availability()
 
     @instance_cache
-    def get_natural_gas_production(self) -> pd.DataFrame:
+    def get_natural_gas_production(self, element: Element) -> pd.DataFrame:
         """Natural gas production per node."""
+        self._prepare_request(element)
         return self._query_natural_gas_production()
 
     @instance_cache
-    def get_waste_availability(self, include_industry: bool = False) -> pd.Series:
+    def get_waste_availability(
+        self, element: Element, include_industry: bool = False
+    ) -> pd.Series:
         """Waste availability per node.
 
         Args:
             include_industry: Whether to include industrial waste
                 consumption in the availability calculation.
         """
+        self._prepare_request(element)
         return self._query_waste_availability(include_industry=include_industry)
 
     @instance_cache
-    def get_naphtha_demand(self) -> pd.DataFrame:
+    def get_naphtha_demand(self, element: Element) -> pd.DataFrame:
         """Naphtha demand per node."""
+        self._prepare_request(element)
         return self._query_naphtha_demand()
 
     @instance_cache
-    def get_kerosene_demand(self) -> pd.DataFrame:
+    def get_kerosene_demand(self, element: Element) -> pd.DataFrame:
         """Kerosene demand per node."""
+        self._prepare_request(element)
         return self._query_kerosene_demand()
 
     @instance_cache
-    def get_shipping_fuel_demand(self) -> pd.Series:
+    def get_shipping_fuel_demand(self, element: Element) -> pd.Series:
         """Shipping fuel demand per node."""
+        self._prepare_request(element)
         return self._query_shipping_fuel_demand()
 
     @instance_cache
-    def get_population_by_urbanization(self) -> pd.DataFrame:
+    def get_population_by_urbanization(self, element: Element) -> pd.DataFrame:
         """Population share per country and degree of urbanization (urban,
         intermediate, rural), for all available Eurostat years."""
+        self._prepare_request(element)
         return self._query_population_by_urbanization()
 
     # -------- data queries ------------------
@@ -497,26 +508,26 @@ class Eurostat(Dataset[pd.DataFrame]):
             .rename(_EFFICIENCY_SIEC, axis=1)
             .rename(_EFFICIENCY_TECHNOLOGY_NAMES, axis=1)
         )
-        return efficiencies.loc["output"] / efficiencies.loc["input"]
+        return cast(pd.Series, efficiencies.loc["output"] / efficiencies.loc["input"])
 
     def _query_electricity_generation(self) -> pd.Series:
         """Extract the gross electricity generation from Eurostat."""
         siec = {"TOTAL": "Total"}
         nrg_bal = {"GEP": "Gross electricity production"}
-        generation = self._query_siec_data(
+        raw_generation = self._query_siec_data(
             nrg_bal=nrg_bal,
             siec=siec,
             start_period=self.eurostat_time_series_year,
         )
-        generation = cast(
+        generation_frame = cast(
             pd.DataFrame,
-            generation.drop(["freq", "unit", "nrg_bal", "siec"], axis=1)
+            raw_generation.drop(["freq", "unit", "nrg_bal", "siec"], axis=1)
             .set_index("geo\\TIME_PERIOD")
             .squeeze(),
         )
-        generation = generation.astype(float)
-        generation.columns = generation.columns.astype(int)
-        generation = generation[self.eurostat_time_series_year]
+        generation_frame = generation_frame.astype(float)
+        generation_frame.columns = generation_frame.columns.astype(int)
+        generation = cast(pd.Series, generation_frame[self.eurostat_time_series_year])
         return generation.sort_index()
 
     def _query_total_heat_household(self) -> pd.DataFrame:

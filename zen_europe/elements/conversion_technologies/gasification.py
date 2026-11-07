@@ -56,9 +56,7 @@ class Gasification(ConversionTechnology):
         Sets the lifetime of gasification.
 
         """
-        tech_db = TechnologyCostDatabase(
-            settings=self.settings, source_path=self.source_path
-        )
+        tech_db = TechnologyCostDatabase(source_path=self.source_path)
         return tech_db.get_lifetime(self)
 
     def _set_conversion_factor(self) -> Attribute:
@@ -89,9 +87,7 @@ class Gasification(ConversionTechnology):
 
         """
         if self.settings.investment.use_construction_times:
-            tech_db = TechnologyCostDatabase(
-                settings=self.settings, source_path=self.source_path
-            )
+            tech_db = TechnologyCostDatabase(source_path=self.source_path)
             return tech_db.get_construction_time(self)
         else:
             return self.construction_time
@@ -103,9 +99,7 @@ class Gasification(ConversionTechnology):
         Returns:
             Attribute: An Attribute object containing the specific capex data.
         """
-        tech_db = TechnologyCostDatabase(
-            settings=self.settings, source_path=self.source_path
-        )
+        tech_db = TechnologyCostDatabase(source_path=self.source_path)
         return tech_db.get_capex_specific_conversion(self)
 
     def _set_opex_specific_fixed(self) -> Attribute:
@@ -115,9 +109,7 @@ class Gasification(ConversionTechnology):
         Returns:
             Attribute: An Attribute object containing the specific fixed opex data.
         """
-        tech_db = TechnologyCostDatabase(
-            settings=self.settings, source_path=self.source_path
-        )
+        tech_db = TechnologyCostDatabase(source_path=self.source_path)
         return tech_db.get_opex_specific_fixed(self)
 
     def _set_opex_specific_variable(self) -> Attribute:
@@ -127,9 +119,7 @@ class Gasification(ConversionTechnology):
         Returns:
             Attribute: An Attribute object containing the specific variable opex data.
         """
-        tech_db = TechnologyCostDatabase(
-            settings=self.settings, source_path=self.source_path
-        )
+        tech_db = TechnologyCostDatabase(source_path=self.source_path)
         return tech_db.get_opex_specific_variable(self)
 
     def _set_max_diffusion_rate(self) -> Attribute:

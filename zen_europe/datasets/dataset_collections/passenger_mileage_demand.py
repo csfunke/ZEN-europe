@@ -12,7 +12,6 @@ if TYPE_CHECKING:
 
 from zen_creator import Attribute, Carrier, ConversionTechnology, DatasetCollection
 from zen_creator.utils.attribute import SourceInformation
-from zen_creator.utils.settings import Settings
 
 from zen_europe.datasets.datasets.carrier.eurostat import Eurostat
 from zen_europe.datasets.datasets.carrier.standard_load_profiles import (
@@ -21,15 +20,16 @@ from zen_europe.datasets.datasets.carrier.standard_load_profiles import (
 from zen_europe.datasets.datasets.carrier.statistical_pocketbook_transport import (
     StatisticalPocketbookTransport,
 )
+from zen_europe.utils.time_series import require_acceptable_year
 
 
 class PassengerMileageDemand(DatasetCollection):
     """Extracting passenger mileage demand data."""
 
     name = "passenger_mileage_demand"
+    ACCEPTABLE_YEARS = Eurostat.ACCEPTABLE_YEARS
 
-    def __init__(self, settings: Settings, source_path: Path | str):
-        self.settings = settings
+    def __init__(self, source_path: Path | str | None = None) -> None:
         super().__init__(source_path=source_path)
 
     def _get_data(self) -> Dict[str, Dataset[Any]]:
@@ -39,13 +39,11 @@ class PassengerMileageDemand(DatasetCollection):
             raise ValueError("source_path must be set to load the dataset collection.")
 
         return {
-            "eurostat": Eurostat(self.settings, self.source_path),
+            "eurostat": Eurostat(self.source_path),
             "statistical_pocketbook_transport": StatisticalPocketbookTransport(
-                self.settings, self.source_path
+                self.source_path
             ),
-            "standard_load_profiles": StandardLoadProfiles(
-                self.settings, self.source_path
-            ),
+            "standard_load_profiles": StandardLoadProfiles(self.source_path),
         }
 
     def get_demand(self, element: Carrier) -> Attribute:
@@ -81,9 +79,15 @@ class PassengerMileageDemand(DatasetCollection):
         Get the hourly passenger mileage demand for the specified element.
 
         """
+        require_acceptable_year(
+            element.settings.time.time_series_year,
+            dataset_name=self.name,
+            setting_name="time_series_year",
+            acceptable_years=self.ACCEPTABLE_YEARS,
+        )
         # get urbanization data from Eurostat dataset
         eurostat_dataset = cast(Eurostat, self.data["eurostat"])
-        share_regions = eurostat_dataset.get_population_by_urbanization()
+        share_regions = eurostat_dataset.get_population_by_urbanization(element)
         time_series_year = element.settings.time.time_series_year
         share_regions = share_regions[time_series_year].unstack()
         common_nodes = pd.Index(share_regions.columns).intersection(

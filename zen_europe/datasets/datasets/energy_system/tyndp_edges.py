@@ -12,7 +12,7 @@ from zen_creator.utils.attribute import Attribute, SourceInformation
 class TYNDP_2020_edges(Dataset[Dict[str, pd.DataFrame]]):
     name = "tyndp_2020_edges"
 
-    def __init__(self, source_path: Path | str):
+    def __init__(self, source_path: Path | str | None = None) -> None:
         super().__init__(source_path=source_path)
 
     def _set_metadata(self) -> MetaData:

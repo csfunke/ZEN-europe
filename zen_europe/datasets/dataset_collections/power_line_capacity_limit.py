@@ -21,7 +21,6 @@ if TYPE_CHECKING:
 from zen_creator import Attribute, DatasetCollection, TransportTechnology
 from zen_creator.datasets.datasets.metadata import MetadataTree
 from zen_creator.utils.attribute import SourceInformation
-from zen_creator.utils.settings import Settings
 
 
 class PowerLineCapacityLimit(DatasetCollection):
@@ -43,11 +42,7 @@ class PowerLineCapacityLimit(DatasetCollection):
     CANDIDATES = "candidates"
     BOTH = "both"
 
-    def __init__(
-        self, settings: Settings, source_path: Path | str, set_nodes: list[str]
-    ):
-        self.settings = settings
-        self.set_nodes = set_nodes
+    def __init__(self, source_path: Path | str | None = None) -> None:
         super().__init__(source_path=source_path)
 
     def _get_data(self) -> Dict[str, Dataset[Any]]:
@@ -61,17 +56,13 @@ class PowerLineCapacityLimit(DatasetCollection):
                 source_path=self.source_path
             ),
             "iosn_candidate_units": IoSNCandidateUnits(source_path=self.source_path),
-            "entsoe": ENTSOE(
-                settings=self.settings,
-                set_nodes=self.set_nodes,
-                source_path=self.source_path,
-            ),
+            "entsoe": ENTSOE(source_path=self.source_path),
         }
 
     # -------- outward-facing accessors ------------------
     def get_capacity_limit(self, technology: TransportTechnology) -> Attribute:
         """Get the capacity limit of the power lines of every edge."""
-        potential = self.settings.data_source.potential_capacity_power_line
+        potential = technology.settings.data_source.potential_capacity_power_line
         set_edges = cast(
             pd.DataFrame | None, technology.model.energy_system.set_edges.df
         )
@@ -84,12 +75,12 @@ class PowerLineCapacityLimit(DatasetCollection):
         limits = {}
         metadata: Dict[str, MetadataTree] = {}
         if potential in (self.TYNDP, self.BOTH):
-            limits[self.TYNDP] = self._get_limit_tyndp(set_edges)
+            limits[self.TYNDP] = self._get_limit_tyndp(set_edges, technology)
             metadata["tyndp_electricity_modelling_results"] = self.data[
                 "tyndp_electricity_modelling_results"
             ].metadata
         if potential in (self.CANDIDATES, self.BOTH):
-            limits[self.CANDIDATES] = self._get_limit_candidates(set_edges)
+            limits[self.CANDIDATES] = self._get_limit_candidates(set_edges, technology)
             metadata["iosn_candidate_units"] = self.data[
                 "iosn_candidate_units"
             ].metadata
@@ -116,23 +107,34 @@ class PowerLineCapacityLimit(DatasetCollection):
         )
 
     # -------- capacity limit internals ------------------
-    def _get_limit_tyndp(self, set_edges: pd.DataFrame) -> pd.Series:
+    def _get_limit_tyndp(
+        self, set_edges: pd.DataFrame, technology: TransportTechnology
+    ) -> pd.Series:
         """The export capacity that the TYNDP 2022 scenarios model per edge."""
         modelling_results = cast(
             TYNDPElectricityModellingResults,
             self.data["tyndp_electricity_modelling_results"],
         )
-        capacity = modelling_results.get_export_capacity(self.set_nodes)
+        nodes = list(technology.model.config.system.set_nodes)
+        capacity = modelling_results.get_export_capacity(nodes)
         return self._to_edges(self._symmetric(capacity), set_edges)
 
-    def _get_limit_candidates(self, set_edges: pd.DataFrame) -> pd.Series:
+    def _get_limit_candidates(
+        self, set_edges: pd.DataFrame, technology: TransportTechnology
+    ) -> pd.Series:
         """The existing capacity plus the increase of all candidates per edge."""
         candidate_units = cast(IoSNCandidateUnits, self.data["iosn_candidate_units"])
-        increase = candidate_units.get_capacity_increase(self.set_nodes)
+        nodes = list(technology.model.config.system.set_nodes)
+        increase = candidate_units.get_capacity_increase(nodes)
         increase = self._to_edges(self._symmetric(increase), set_edges)
 
         entsoe = cast(ENTSOE, self.data["entsoe"])
-        transmission = entsoe.get_transmission_capacity()
+        transmission = entsoe.get_transmission_capacity(
+            year=technology.settings.time.reference_year - 1,
+            nodes=nodes,
+            monthly=technology.settings.data_source.use_monthly_entsoe_ntc,
+            overwrite=technology.settings.cache.overwrite_entsoe,
+        )
         capacity_existing = transmission["capacity_existing"].droplevel(
             "year_construction"
         )

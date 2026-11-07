@@ -90,9 +90,7 @@ class BEV(ConversionTechnology):
         Sets the specific conversion CAPEX of BEV.
 
         """
-        vehicle_capacity = ExistingVehicleCapacity(
-            settings=self.model.settings, source_path=self.source_path
-        )
+        vehicle_capacity = ExistingVehicleCapacity(source_path=self.source_path)
         return vehicle_capacity.get_capex_specific_conversion_passenger(element=self)
 
     def _set_capacity_existing(self) -> Attribute:
@@ -101,9 +99,7 @@ class BEV(ConversionTechnology):
 
         """
         if self.settings.investment.use_existing_capacities:
-            vehicle_capacity = ExistingVehicleCapacity(
-                settings=self.model.settings, source_path=self.source_path
-            )
+            vehicle_capacity = ExistingVehicleCapacity(source_path=self.source_path)
             ex_cap = vehicle_capacity.get_existing_capacity_passenger(element=self)
             attr = self.capacity_existing
             return attr.set_data(
@@ -137,9 +133,7 @@ class BEV(ConversionTechnology):
         Sets the maximum load of BEV.
 
         """
-        passenger_transport_db = PassengerMileageDemand(
-            settings=self.model.settings, source_path=self.source_path
-        )
+        passenger_transport_db = PassengerMileageDemand(source_path=self.source_path)
         return passenger_transport_db.get_max_load(element=self)
 
     def _set_max_diffusion_rate(self) -> Attribute:

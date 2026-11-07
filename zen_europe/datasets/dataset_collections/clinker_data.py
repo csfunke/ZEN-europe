@@ -39,7 +39,7 @@ class ClinkerData(DatasetCollection):
 
     name = "clinker_data"
 
-    def __init__(self, source_path: Path | str):
+    def __init__(self, source_path: Path | str | None = None) -> None:
         super().__init__(source_path=source_path)
 
     def _get_data(self) -> Dict[str, Dataset[Any]]:

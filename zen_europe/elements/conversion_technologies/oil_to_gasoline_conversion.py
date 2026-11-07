@@ -137,9 +137,7 @@ class OilToGasolineConversion(ConversionTechnology):
             )
             return attr
 
-        vehicle_capacity = ExistingVehicleCapacity(
-            settings=self.model.settings, source_path=self.source_path
-        )
+        vehicle_capacity = ExistingVehicleCapacity(source_path=self.source_path)
         return vehicle_capacity.get_existing_capacity_oil_conversion(element=self)
 
     def _set_max_diffusion_rate(self) -> Attribute:

@@ -154,10 +154,8 @@ class DieselICEShip(ConversionTechnology):
             Attribute: An Attribute object containing the existing capacity data.
         """
         if self.settings.investment.use_existing_capacities:
-            eurostat_dataset = Eurostat(
-                settings=self.settings, source_path=self.source_path
-            )
-            shipping_fuel_demand = eurostat_dataset.get_shipping_fuel_demand()
+            eurostat_dataset = Eurostat(source_path=self.source_path)
+            shipping_fuel_demand = eurostat_dataset.get_shipping_fuel_demand(self)
             common_nodes = shipping_fuel_demand.index.intersection(
                 self.model.config.system.set_nodes
             )

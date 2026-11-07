@@ -31,7 +31,6 @@ if TYPE_CHECKING:
 from zen_creator import Attribute, DatasetCollection, TransportTechnology
 from zen_creator.datasets.datasets.metadata import MetadataTree
 from zen_creator.utils.attribute import SourceInformation
-from zen_creator.utils.settings import Settings
 
 
 class TransportTechnologiesCosts(DatasetCollection):
@@ -71,11 +70,7 @@ class TransportTechnologiesCosts(DatasetCollection):
         "natural_gas_pipeline": "ammonia_pipelines_galimova",
     }
 
-    def __init__(
-        self, settings: Settings, source_path: Path | str, set_nodes: list[str]
-    ):
-        self.settings = settings
-        self.set_nodes = set_nodes
+    def __init__(self, source_path: Path | str | None = None) -> None:
         super().__init__(source_path=source_path)
 
     def _get_data(self) -> Dict[str, Dataset[Any]]:
@@ -243,7 +238,7 @@ class TransportTechnologiesCosts(DatasetCollection):
         neither the source of the technology nor a proxy source reports an
         offshore cost.
         """
-        if not self.settings.investment.account_for_offshore_transport:
+        if not technology.settings.investment.account_for_offshore_transport:
             return None, None
         if hasattr(dataset, offshore_method):
             return (
@@ -263,7 +258,9 @@ class TransportTechnologiesCosts(DatasetCollection):
     def _get_offshore_edges(self, technology: TransportTechnology) -> pd.Index:
         """Get the edges of the model that cross the sea."""
         edges = Edges(source_path=self.source_path)
-        return edges.get_edges_offshore(technology, self.set_nodes)
+        return edges.get_edges_offshore(
+            technology, list(technology.model.config.system.set_nodes)
+        )
 
     @staticmethod
     def _get_cost(

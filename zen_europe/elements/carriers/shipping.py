@@ -59,9 +59,7 @@ class Shipping(Carrier):
         Return the demand of shipping.
 
         """
-        carrier_availability = CarrierAvailability(
-            settings=self.settings, source_path=self.model.source_path
-        )
+        carrier_availability = CarrierAvailability(source_path=self.model.source_path)
         attr = carrier_availability.get_shipping_demand(element=self)
         if self.settings.scenario.sensitivity_demand:
             attr.add_scenarios(demand_sensitivity_scenarios(self.name))

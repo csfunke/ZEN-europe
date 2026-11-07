@@ -27,9 +27,7 @@ class Electricity(Carrier):
         Return the demand for electricity.
 
         """
-        electricity_demand_dataset = ElectricityDemand(
-            self.settings, self.model.config.system.set_nodes, self.source_path
-        )
+        electricity_demand_dataset = ElectricityDemand(self.source_path)
         attr = electricity_demand_dataset.get_demand(self)
         if self.settings.scenario.sensitivity_demand:
             attr.add_scenarios(demand_sensitivity_scenarios(self.name))

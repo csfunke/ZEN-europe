@@ -57,7 +57,7 @@ class Oil(Carrier):
         else:
             if self.settings.availability.cap_oil_import:
                 carrier_availability = CarrierAvailability(
-                    settings=self.settings, source_path=self.model.source_path
+                    source_path=self.model.source_path
                 )
                 return carrier_availability.get_oil_availability(element=self)
             else:

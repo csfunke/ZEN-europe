@@ -63,9 +63,9 @@ class EconomicsOfOilRefining(Dataset[pd.Series]):
         specific_capex = total_capex / (
             total_capacity * Constants.HOURS_PER_YEAR
         )  # USD/(t/h)
-        ecb_d2e = ECBDollar2Euro()
+        ecb_d2e = ECBDollar2Euro(source_path=self.source_path)
         d2e = ecb_d2e.get_dollar2euro(self.MONEY_YEAR)
-        inflation = ECBInflation()
+        inflation = ECBInflation(source_path=self.source_path)
         inflation_factor = inflation.get_inflation_rate(
             self.MONEY_YEAR, element.settings.time.price_year
         )
@@ -103,9 +103,9 @@ class EconomicsOfOilRefining(Dataset[pd.Series]):
         specific_opex = total_opex / (
             total_capacity * Constants.HOURS_PER_YEAR
         )  # USD/(t/h)
-        ecb_d2e = ECBDollar2Euro()
+        ecb_d2e = ECBDollar2Euro(source_path=self.source_path)
         d2e = ecb_d2e.get_dollar2euro(self.MONEY_YEAR)
-        inflation = ECBInflation()
+        inflation = ECBInflation(source_path=self.source_path)
         inflation_factor = inflation.get_inflation_rate(
             self.MONEY_YEAR, element.settings.time.price_year
         )
@@ -136,9 +136,9 @@ class EconomicsOfOilRefining(Dataset[pd.Series]):
         attr = element.opex_specific_variable
         opex_variable = 1  # 1 USD per barrel
         specific_opex = opex_variable * Constants.BARREL_PER_TON  # USD per ton
-        ecb_d2e = ECBDollar2Euro()
+        ecb_d2e = ECBDollar2Euro(source_path=self.source_path)
         d2e = ecb_d2e.get_dollar2euro(self.MONEY_YEAR)
-        inflation = ECBInflation()
+        inflation = ECBInflation(source_path=self.source_path)
         inflation_factor = inflation.get_inflation_rate(
             self.MONEY_YEAR, element.settings.time.price_year
         )

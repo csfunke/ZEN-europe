@@ -7,12 +7,11 @@ import pandas as pd
 from zen_creator import Element
 from zen_creator.datasets.datasets.dataset import Dataset
 from zen_creator.datasets.datasets.metadata import MetaData
-from zen_creator.utils.settings import Settings
 
 from zen_europe.utils.time_series import require_acceptable_year
 
 
-class StatisticalPocketbookTransport(Dataset[dict[str, pd.Series]]):
+class StatisticalPocketbookTransport(Dataset[dict[str, pd.DataFrame]]):
     """
     Statistical pocketbook transport dataset class.
 
@@ -31,8 +30,7 @@ class StatisticalPocketbookTransport(Dataset[dict[str, pd.Series]]):
         2020,
     )
 
-    def __init__(self, settings: Settings, source_path: Path | str | None = None):
-        self.settings = settings
+    def __init__(self, source_path: Path | str | None = None) -> None:
         super().__init__(source_path=source_path)
 
     def _set_metadata(self) -> MetaData:
@@ -53,19 +51,14 @@ class StatisticalPocketbookTransport(Dataset[dict[str, pd.Series]]):
             raise ValueError("source_path must be set to load the dataset.")
         return Path(self.source_path) / "02-carrier" / "transport" / "mileage_EU.xlsx"
 
-    def _set_data(self) -> dict[str, pd.Series]:
+    def _set_data(self) -> dict[str, pd.DataFrame]:
         types = ["passenger_mileage", "truck_mileage"]
-        time_series_year = self.settings.time.time_series_year
-        require_acceptable_year(
-            time_series_year,
-            dataset_name=self.name,
-            setting_name="time_series_year",
-            acceptable_years=self.ACCEPTABLE_YEARS,
-        )
-        data: dict[str, pd.Series] = {}
+        data: dict[str, pd.DataFrame] = {}
         for t in types:
             sheet = pd.read_excel(self.path, sheet_name=t).set_index("Column1")
-            data[t] = sheet[str(time_series_year)].str.replace(" ", "").astype(float)
+            data[t] = sheet.apply(
+                lambda column: column.astype(str).str.replace(" ", "").astype(float)
+            )
         return data
 
     # -------- methods ------------------------
@@ -76,7 +69,14 @@ class StatisticalPocketbookTransport(Dataset[dict[str, pd.Series]]):
         Returns:
             A pandas Series containing the total mileage.
         """
-        data = self.data[element.name]
+        time_series_year = element.settings.time.time_series_year
+        require_acceptable_year(
+            time_series_year,
+            dataset_name=self.name,
+            setting_name="time_series_year",
+            acceptable_years=self.ACCEPTABLE_YEARS,
+        )
+        data = self.data[element.name][str(time_series_year)]
         data = data.loc[element.model.config.system.set_nodes] * 1000  # million km/a
         data.index.name = "node"
         data.name = "demand"

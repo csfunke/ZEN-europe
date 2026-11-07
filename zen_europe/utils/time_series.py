@@ -15,6 +15,30 @@ DEMAND_TIME_SERIES_YEARS = (2019, 2020)
 WEATHER_YEARS = tuple(range(2008, 2023))
 
 
+def validate_model_time_index(
+    data: DataFrameOrSeries, *, dataset_name: str
+) -> DataFrameOrSeries:
+    """Validate that data uses the canonical 8,760-hour model index.
+
+    Args:
+        data: Time series to validate.
+        dataset_name: Human-readable source identifier used in errors.
+
+    Returns:
+        The input unchanged.
+
+    Raises:
+        ValueError: If the index is not the contiguous range ``0..8759``.
+    """
+    expected = pd.RangeIndex(MODEL_HOURS_PER_YEAR, name="time")
+    if not data.index.equals(expected):
+        raise ValueError(
+            f"Dataset '{dataset_name}' must use the canonical 8,760-hour "
+            "RangeIndex named 'time'."
+        )
+    return data
+
+
 def require_acceptable_year(
     year: int,
     *,

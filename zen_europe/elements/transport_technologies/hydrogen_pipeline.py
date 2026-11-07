@@ -83,9 +83,7 @@ class HydrogenPipeline(TransportTechnology):
         Sets the distance-specific capex of hydrogen pipeline.
         """
         transport_costs = TransportTechnologiesCosts(
-            settings=self.settings,
             source_path=self.source_path,
-            set_nodes=self.model.config.system.set_nodes,
         )
         return transport_costs.get_capex_per_distance_transport(self)
 

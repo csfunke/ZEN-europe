@@ -17,12 +17,15 @@ test.py
 /data/raw_data/01-energy_system/worldbank_population/*.csv
 /data/raw_data/02-carrier/entsoe/*.feather
 /data/raw_data/02-carrier/entsoe/*.json
+/data/raw_data/02-carrier/entsoe/**/*.feather
+/data/raw_data/02-carrier/entsoe/**/*.json
 /data/raw_data/02-carrier/eurostat/*.feather
 /data/raw_data/02-carrier/eurostat/*.json
 /data/raw_data/02-carrier/heat/when2heat/when2heat_2023-07-27.csv
 /data/raw_data/02-carrier/heat/when2heat/when2heat_2023-07-27_*.feather
 /data/raw_data/02-carrier/heat/jrc_idees/useful_thermal_energy_service.feather
 /data/raw_data/03-technology/capacity_existing/transport/unece/*.feather
+/data/raw_data/03-technology/capacity_existing/transport/unece/**/*.feather
 /data/raw_data/03-technology/capacity_existing/glohydrores_data.feather
 /data/raw_data/03-technology/capacity_existing/glohydrores_data_raw.feather
 /data/raw_data/03-technology/capacity_existing/jrc_hydro_power_database_data.feather

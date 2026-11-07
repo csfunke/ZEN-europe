@@ -76,9 +76,7 @@ class BiomassPlantCCS(RetrofittingTechnology):
         Sets the lifetime of biomass plant CCS.
 
         """
-        tech_db = TechnologyCostDatabase(
-            settings=self.settings, source_path=self.source_path
-        )
+        tech_db = TechnologyCostDatabase(source_path=self.source_path)
         return tech_db.get_lifetime(self)
 
     def _set_construction_time(self) -> Attribute:
@@ -87,9 +85,7 @@ class BiomassPlantCCS(RetrofittingTechnology):
 
         """
         if self.settings.investment.use_construction_times:
-            tech_db = TechnologyCostDatabase(
-                settings=self.settings, source_path=self.source_path
-            )
+            tech_db = TechnologyCostDatabase(source_path=self.source_path)
             return tech_db.get_construction_time(self)
         else:
             return self.construction_time
@@ -107,9 +103,7 @@ class BiomassPlantCCS(RetrofittingTechnology):
         Returns:
             Attribute: An Attribute object containing the specific capex data.
         """
-        tech_db = TechnologyCostDatabase(
-            settings=self.settings, source_path=self.source_path
-        )
+        tech_db = TechnologyCostDatabase(source_path=self.source_path)
         base_tech = cast(
             ConversionTechnology, self.model.elements[self.base_technology_name]
         )
@@ -129,9 +123,7 @@ class BiomassPlantCCS(RetrofittingTechnology):
         Returns:
             Attribute: An Attribute object containing the specific fixed opex data.
         """
-        tech_db = TechnologyCostDatabase(
-            settings=self.settings, source_path=self.source_path
-        )
+        tech_db = TechnologyCostDatabase(source_path=self.source_path)
         base_tech = cast(
             ConversionTechnology, self.model.elements[self.base_technology_name]
         )
@@ -149,9 +141,7 @@ class BiomassPlantCCS(RetrofittingTechnology):
         Returns:
             Attribute: An Attribute object containing the specific variable opex data.
         """
-        tech_db = TechnologyCostDatabase(
-            settings=self.settings, source_path=self.source_path
-        )
+        tech_db = TechnologyCostDatabase(source_path=self.source_path)
         base_tech = cast(
             ConversionTechnology, self.model.elements[self.base_technology_name]
         )
@@ -164,9 +154,7 @@ class BiomassPlantCCS(RetrofittingTechnology):
         Return the conversion factor of biomass plant CCS.
 
         """
-        ccs_cf_db = CCSConversionFactor(
-            settings=self.settings, source_path=self.source_path
-        )
+        ccs_cf_db = CCSConversionFactor(source_path=self.source_path)
         base_tech = cast(
             ConversionTechnology, self.model.elements[self.base_technology_name]
         )
@@ -178,9 +166,7 @@ class BiomassPlantCCS(RetrofittingTechnology):
         Return the retrofit flow coupling factor of biomass plant CCS.
 
         """
-        ccs_cf_db = CCSConversionFactor(
-            settings=self.settings, source_path=self.source_path
-        )
+        ccs_cf_db = CCSConversionFactor(source_path=self.source_path)
         base_tech = cast(
             ConversionTechnology, self.model.elements[self.base_technology_name]
         )
@@ -196,9 +182,7 @@ class BiomassPlantCCS(RetrofittingTechnology):
             Attribute: An Attribute object containing the existing capacity data.
         """
         if self.settings.investment.use_existing_capacities:
-            igop_projects = IOGPCarbonStorageProjects(
-                settings=self.settings, source_path=self.source_path
-            )
+            igop_projects = IOGPCarbonStorageProjects(source_path=self.source_path)
             return igop_projects.get_capacity_existing_capture(self)
         else:
             attr = self.capacity_existing
@@ -231,10 +215,8 @@ class BiomassPlantCCS(RetrofittingTechnology):
         attr = self.capacity_addition_unbounded
         if not self.settings.investment.use_unbounded_capacity_addition_carbon:
             return attr
-        iogp_projects = IOGPCarbonStorageProjects(
-            settings=self.settings, source_path=self.source_path
-        )
-        data = iogp_projects.get_capacity_existing_data()
+        iogp_projects = IOGPCarbonStorageProjects(source_path=self.source_path)
+        data = iogp_projects.get_capacity_existing_data(self)
         median_add = data.median()
         return attr.set_data(
             default_value=median_add,

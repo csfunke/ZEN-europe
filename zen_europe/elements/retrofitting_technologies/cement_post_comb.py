@@ -84,9 +84,7 @@ class CementPostComb(RetrofittingTechnology):
         Sets the lifetime of cement post-combustion capture.
 
         """
-        tech_db = TechnologyCostDatabase(
-            settings=self.settings, source_path=self.source_path
-        )
+        tech_db = TechnologyCostDatabase(source_path=self.source_path)
         return tech_db.get_lifetime(self)
 
     def _set_construction_time(self) -> Attribute:
@@ -95,9 +93,7 @@ class CementPostComb(RetrofittingTechnology):
 
         """
         if self.settings.investment.use_construction_times:
-            tech_db = TechnologyCostDatabase(
-                settings=self.settings, source_path=self.source_path
-            )
+            tech_db = TechnologyCostDatabase(source_path=self.source_path)
             return tech_db.get_construction_time(self)
         else:
             return self.construction_time
@@ -141,9 +137,7 @@ class CementPostComb(RetrofittingTechnology):
         Returns:
             Attribute: An Attribute object containing the specific capex data.
         """
-        tech_db = TechnologyCostDatabase(
-            settings=self.settings, source_path=self.source_path
-        )
+        tech_db = TechnologyCostDatabase(source_path=self.source_path)
         return tech_db.get_capex_specific_conversion(self)
 
     def _set_opex_specific_fixed(self) -> Attribute:
@@ -154,9 +148,7 @@ class CementPostComb(RetrofittingTechnology):
         Returns:
             Attribute: An Attribute object containing the specific fixed opex data.
         """
-        tech_db = TechnologyCostDatabase(
-            settings=self.settings, source_path=self.source_path
-        )
+        tech_db = TechnologyCostDatabase(source_path=self.source_path)
         return tech_db.get_opex_specific_fixed(self)
 
     def _set_opex_specific_variable(self) -> Attribute:
@@ -167,9 +159,7 @@ class CementPostComb(RetrofittingTechnology):
         Returns:
             Attribute: An Attribute object containing the specific variable opex data.
         """
-        tech_db = TechnologyCostDatabase(
-            settings=self.settings, source_path=self.source_path
-        )
+        tech_db = TechnologyCostDatabase(source_path=self.source_path)
         return tech_db.get_opex_specific_variable(self)
 
     def _set_retrofit_flow_coupling_factor(self) -> Attribute:
@@ -214,9 +204,7 @@ class CementPostComb(RetrofittingTechnology):
             Attribute: An Attribute object containing the existing capacity data.
         """
         if self.settings.investment.use_existing_capacities:
-            igop_projects = IOGPCarbonStorageProjects(
-                settings=self.settings, source_path=self.source_path
-            )
+            igop_projects = IOGPCarbonStorageProjects(source_path=self.source_path)
             return igop_projects.get_capacity_existing_capture(self)
         else:
             attr = self.capacity_existing
@@ -249,10 +237,8 @@ class CementPostComb(RetrofittingTechnology):
         attr = self.capacity_addition_unbounded
         if not self.settings.investment.use_unbounded_capacity_addition_carbon:
             return attr
-        iogp_projects = IOGPCarbonStorageProjects(
-            settings=self.settings, source_path=self.source_path
-        )
-        data = iogp_projects.get_capacity_existing_data()
+        iogp_projects = IOGPCarbonStorageProjects(source_path=self.source_path)
+        data = iogp_projects.get_capacity_existing_data(self)
         median_add = data.median()
         return attr.set_data(
             default_value=median_add,

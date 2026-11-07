@@ -134,9 +134,7 @@ class DistrictHeatingGrid(ConversionTechnology):
         Returns:
             Attribute: An Attribute object containing the specific capex data.
         """
-        dh_dataset = DistrictHeatingData(
-            settings=self.settings, source_path=self.source_path
-        )
+        dh_dataset = DistrictHeatingData(source_path=self.source_path)
         capex = dh_dataset.get_capex_specific_conversion(self)
         return capex
 
@@ -148,9 +146,7 @@ class DistrictHeatingGrid(ConversionTechnology):
         Returns:
             Attribute: An Attribute object containing the specific fixed opex data.
         """
-        dh_dataset = DistrictHeatingData(
-            settings=self.settings, source_path=self.source_path
-        )
+        dh_dataset = DistrictHeatingData(source_path=self.source_path)
         opex_fixed = dh_dataset.get_opex_specific_fixed(self)
         return opex_fixed
 
@@ -162,9 +158,7 @@ class DistrictHeatingGrid(ConversionTechnology):
         Returns:
             Attribute: An Attribute object containing the specific variable opex data.
         """
-        dh_dataset = DistrictHeatingData(
-            settings=self.settings, source_path=self.source_path
-        )
+        dh_dataset = DistrictHeatingData(source_path=self.source_path)
         opex_variable = dh_dataset.get_opex_specific_variable(self)
         return opex_variable
 
@@ -175,9 +169,7 @@ class DistrictHeatingGrid(ConversionTechnology):
         Returns:
             Attribute: An Attribute object containing the capacity limit data.
         """
-        dh_dataset = DistrictHeatingData(
-            settings=self.settings, source_path=self.source_path
-        )
+        dh_dataset = DistrictHeatingData(source_path=self.source_path)
         return dh_dataset.get_capacity_limit(self)
 
     def _set_capacity_existing(self) -> Attribute:
@@ -188,9 +180,7 @@ class DistrictHeatingGrid(ConversionTechnology):
             Attribute: An Attribute object containing the existing capacity data.
         """
         if self.settings.investment.use_existing_capacities:
-            heat_demand_dataset = HeatDemand(
-                settings=self.settings, source_path=self.source_path
-            )
+            heat_demand_dataset = HeatDemand(source_path=self.source_path)
             return heat_demand_dataset.get_capacity_existing(self)
         else:
             attr = self.capacity_existing
@@ -210,9 +200,7 @@ class DistrictHeatingGrid(ConversionTechnology):
         Returns:
             Attribute: An Attribute object containing the maximum load data.
         """
-        heat_demand_dataset = HeatDemand(
-            settings=self.settings, source_path=self.source_path
-        )
+        heat_demand_dataset = HeatDemand(source_path=self.source_path)
 
         return heat_demand_dataset.get_max_load(self)
 

@@ -26,7 +26,7 @@ class EnspresoBiomass(Dataset[pd.DataFrame]):
 
     name = "enspreso_biomass"
 
-    def __init__(self, source_path: Path | str | None):
+    def __init__(self, source_path: Path | str | None = None) -> None:
         super().__init__(source_path=source_path)
 
     def _set_metadata(self) -> MetaData:
@@ -54,7 +54,7 @@ class EnspresoBiomassAvailability(EnspresoBiomass):
 
     name = "enspreso_biomass_availability"
 
-    def __init__(self, source_path: Path | str | None):
+    def __init__(self, source_path: Path | str | None = None) -> None:
         super().__init__(source_path=source_path)
 
     def _set_data(self) -> pd.DataFrame:
@@ -256,7 +256,7 @@ class EnspresoBiomassPrice(EnspresoBiomass):
 
     name = "enspreso_biomass_price"
 
-    def __init__(self, source_path: Path | str | None):
+    def __init__(self, source_path: Path | str | None = None) -> None:
         super().__init__(source_path=source_path)
 
     def _set_data(self) -> pd.DataFrame:

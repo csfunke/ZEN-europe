@@ -29,9 +29,7 @@ class PassengerMileage(Carrier):
         Return the demand for passenger mileage.
 
         """
-        passenger_mileage_dataset = PassengerMileageDemand(
-            self.settings, self.source_path
-        )
+        passenger_mileage_dataset = PassengerMileageDemand(self.source_path)
         attr = passenger_mileage_dataset.get_demand(self)
         if self.settings.scenario.sensitivity_demand:
             attr.add_scenarios(demand_sensitivity_scenarios(self.name))

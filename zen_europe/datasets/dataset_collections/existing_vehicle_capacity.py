@@ -29,7 +29,6 @@ from zen_creator import (
     DatasetCollection,
     SourceInformation,
 )
-from zen_creator.utils.settings import Settings
 
 from zen_europe.utils.constants import Constants
 from zen_europe.utils.utils import (
@@ -71,8 +70,7 @@ class ExistingVehicleCapacity(DatasetCollection):
 
     name = "existing_vehicle_capacity"
 
-    def __init__(self, settings: Settings, source_path: Path | str):
-        self.settings = settings
+    def __init__(self, source_path: Path | str | None = None) -> None:
         super().__init__(source_path=source_path)
 
     def _get_data(self) -> Dict[str, Dataset[Any] | DatasetCollection]:
@@ -82,16 +80,12 @@ class ExistingVehicleCapacity(DatasetCollection):
             raise ValueError("source_path must be set to load the dataset collection.")
 
         return {
-            "unece": UNECE(settings=self.settings, source_path=self.source_path),
-            "pass_demand": PassengerMileageDemand(
-                settings=self.settings, source_path=self.source_path
-            ),
-            "truck_mileage": TruckMileageDemand(
-                settings=self.settings, source_path=self.source_path
-            ),
+            "unece": UNECE(source_path=self.source_path),
+            "pass_demand": PassengerMileageDemand(source_path=self.source_path),
+            "truck_mileage": TruckMileageDemand(source_path=self.source_path),
             "truck_technologies": TruckTechnologiesICCT(self.source_path),
             "passenger_cars": PassengerCarsCox(self.source_path),
-            "eurostat": Eurostat(self.settings, self.source_path),
+            "eurostat": Eurostat(self.source_path),
         }
 
     def get_existing_capacity_passenger(
@@ -107,8 +101,8 @@ class ExistingVehicleCapacity(DatasetCollection):
             pd.Series: The existing vehicle capacity for passenger vehicles.
         """
         unece = cast(UNECE, self.data["unece"])
-        fleet = unece.get_total_fleet()
-        registrations = unece.get_registrations()
+        fleet = unece.get_total_fleet(element)
+        registrations = unece.get_registrations(element)
         passenger_transport_db = cast(PassengerMileageDemand, self.data["pass_demand"])
         passenger_mileage = element.model.carriers["passenger_mileage"]
         total_demand = passenger_transport_db._get_total_demand(
@@ -135,11 +129,11 @@ class ExistingVehicleCapacity(DatasetCollection):
             pd.Series: The existing vehicle capacity for trucks.
         """
         unece = cast(UNECE, self.data["unece"])
-        fleet_by_tech = unece.get_truck_fleet()
-        fleet = unece.get_total_truck_fleet()
+        fleet_by_tech = unece.get_truck_fleet(element)
+        fleet = unece.get_total_truck_fleet(element)
         # a copy, since `get_truck_registrations` is cached and the column
         # added below would otherwise accumulate on the cached frame
-        registrations = unece.get_truck_registrations().copy()
+        registrations = unece.get_truck_registrations(element).copy()
         diff_fleet = (fleet_by_tech.iloc[:, -1] - registrations.sum(axis=1)).clip(
             lower=0
         )
@@ -274,7 +268,7 @@ class ExistingVehicleCapacity(DatasetCollection):
         """Shipping fuel demand in GW per node, assigned to the last year
         before the reference year."""
         eurostat = cast(Eurostat, self.data["eurostat"])
-        demand = eurostat.get_shipping_fuel_demand()
+        demand = eurostat.get_shipping_fuel_demand(element)
         nodes = demand.index.intersection(element.model.config.system.set_nodes)
         demand = demand.loc[nodes] / Constants.HOURS_PER_YEAR
         demand.index = pd.MultiIndex.from_product(

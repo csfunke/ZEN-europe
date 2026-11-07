@@ -87,9 +87,7 @@ class OlefinPipeline(TransportTechnology):
         onto the transported mass of product.
         """
         transport_costs = TransportTechnologiesCosts(
-            settings=self.settings,
             source_path=self.source_path,
-            set_nodes=self.model.config.system.set_nodes,
         )
         return transport_costs.get_capex_per_distance_transport(
             self, proxy_element_name=self.PROXY_TECHNOLOGY

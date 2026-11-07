@@ -15,7 +15,6 @@ if TYPE_CHECKING:
 
 
 from zen_creator import DatasetCollection
-from zen_creator.utils.settings import Settings
 
 from zen_europe.datasets.datasets.carrier.entsoe import ENTSOE
 from zen_europe.utils.time_series import require_acceptable_year
@@ -39,11 +38,7 @@ class NuclearMaxLoad(DatasetCollection):
         range(2015 + NUM_PAST_YEARS, datetime.now().year)
     )
 
-    def __init__(
-        self, settings: Settings, set_nodes: list[str], source_path: Path | str
-    ):
-        self.settings = settings
-        self.set_nodes = set_nodes
+    def __init__(self, source_path: Path | str | None = None) -> None:
         super().__init__(source_path=source_path)
 
     def _get_data(self) -> Dict[str, Dataset[Any]]:
@@ -53,11 +48,7 @@ class NuclearMaxLoad(DatasetCollection):
             raise ValueError("source_path must be set to load the dataset collection.")
 
         return {
-            "entsoe": ENTSOE(
-                settings=self.settings,
-                set_nodes=self.set_nodes,
-                source_path=self.source_path,
-            ),
+            "entsoe": ENTSOE(source_path=self.source_path),
         }
 
     def get_max_load(self, element: Nuclear) -> tuple[pd.DataFrame, pd.Series]:
@@ -72,8 +63,6 @@ class NuclearMaxLoad(DatasetCollection):
 
         """
         entsoe_db = ENTSOE(
-            settings=self.settings,
-            set_nodes=self.set_nodes,
             source_path=self.source_path,
         )
 
@@ -96,9 +85,19 @@ class NuclearMaxLoad(DatasetCollection):
         nodal_ml_by_year = {}
         total_ml_by_year = {}
         for year in years:
-            gen = entsoe_db.get_generation(element.NUCLEAR_PSR_TYPE, year=year)
+            gen = entsoe_db.get_generation(
+                psr_type=element.NUCLEAR_PSR_TYPE,
+                year=year,
+                nodes=list(element.model.config.system.set_nodes),
+                overwrite=element.settings.cache.overwrite_entsoe,
+            )
             gen = gen.dropna(axis=1, how="all")
-            capa = entsoe_db.get_capacity_existing(element.NUCLEAR_PSR_TYPE, year=year)
+            capa = entsoe_db.get_capacity_existing(
+                psr_type=element.NUCLEAR_PSR_TYPE,
+                year=year,
+                nodes=list(element.model.config.system.set_nodes),
+                overwrite=element.settings.cache.overwrite_entsoe,
+            )
             capa = capa.droplevel("year_construction")
             common_nodes = gen.columns.intersection(capa.index)
             gen = gen.loc[:, common_nodes]

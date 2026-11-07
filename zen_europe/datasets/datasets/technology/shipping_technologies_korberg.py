@@ -28,7 +28,9 @@ class ShippingTechnologiesKorberg(Dataset[dict[str, pd.DataFrame]]):
 
     def __init__(self, source_path: Path | str | None = None):
         super().__init__(source_path=source_path)
-        self.get_inflation_rate = ECBInflation().get_inflation_rate
+        self.get_inflation_rate = ECBInflation(
+            source_path=self.source_path
+        ).get_inflation_rate
 
     def _set_metadata(self) -> MetaData:
         return MetaData(

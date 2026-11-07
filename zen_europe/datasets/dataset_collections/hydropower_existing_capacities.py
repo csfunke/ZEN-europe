@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING, Any, cast
 import pandas as pd
 from zen_creator import Attribute, DatasetCollection
 from zen_creator.utils.attribute import SourceInformation
-from zen_creator.utils.settings import Settings
 
 from zen_europe.datasets.datasets.technology.pan_european_climate_database import (
     PanEuropeanClimateDatabase,
@@ -51,14 +50,12 @@ class HydropowerExistingCapacities(DatasetCollection):
     # capacity classifications consistent without inventing additional capacity.
     ROR_AS_RESERVOIR_NODES = pd.Index(["FI", "NO"])
 
-    def __init__(self, settings: Settings, source_path: Path | str):
+    def __init__(self, source_path: Path | str | None = None) -> None:
         """Initialize the hydropower capacity collection.
 
         Args:
-            settings: Model settings used when loading PECD data.
             source_path: Root directory containing the source datasets.
         """
-        self.settings = settings
         super().__init__(source_path=source_path)
 
     def _get_data(self) -> dict[str, Dataset[Any]]:
@@ -76,8 +73,7 @@ class HydropowerExistingCapacities(DatasetCollection):
         return {
             "pecd_hydro_capacities": PECDHydroCapacities(self.source_path),
             "pan_european_climate_database": PanEuropeanClimateDatabase(
-                settings=self.settings,
-                source_path=self.source_path,
+                source_path=self.source_path
             ),
         }
 
@@ -221,7 +217,7 @@ class HydropowerExistingCapacities(DatasetCollection):
             self.data["pan_european_climate_database"],
         )
         shares = capacities.get_open_loop_shares()
-        open_loop = pecd.data["pumped_hydro"]
+        open_loop = pecd._get_for_element("pumped_hydro", element)
         missing_share_nodes = open_loop.columns.difference(shares.index)
         missing_share_nodes = missing_share_nodes[
             open_loop[missing_share_nodes].abs().sum(axis=0) > 0
@@ -236,12 +232,15 @@ class HydropowerExistingCapacities(DatasetCollection):
         data = open_loop.mul(fraction, axis=1)
         reclassified_nodes: pd.Index[str] = pd.Index([], dtype=str)
         if element.name == "reservoir_hydro":
-            data = pecd.data["reservoir_hydro"].add(data, fill_value=0)
+            data = pecd._get_for_element("reservoir_hydro", element).add(
+                data, fill_value=0
+            )
             reclassified_nodes = self.ROR_AS_RESERVOIR_NODES.intersection(
                 element.model.config.system.set_nodes
             )
-            ror_energy = pecd.data["run-of-river_hydro"].add(
-                pecd.data["run-of-river_with_pondage_hydro"], fill_value=0
+            ror_energy = pecd._get_for_element("run-of-river_hydro", element).add(
+                pecd._get_for_element("run-of-river_with_pondage_hydro", element),
+                fill_value=0,
             )
             data = data.add(
                 ror_energy.reindex(columns=reclassified_nodes, fill_value=0),

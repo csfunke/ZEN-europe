@@ -72,9 +72,7 @@ class Nuclear(ConversionTechnology):
         Sets the lifetime of nuclear.
 
         """
-        lifetime_expectation = LifetimeExpectation(
-            settings=self.settings, source_path=self.source_path
-        )
+        lifetime_expectation = LifetimeExpectation(source_path=self.source_path)
         return lifetime_expectation.get_lifetime(self)
 
     def _set_construction_time(self) -> Attribute:
@@ -83,9 +81,7 @@ class Nuclear(ConversionTechnology):
 
         """
         if self.settings.investment.use_construction_times:
-            tech_db = TechnologyCostDatabase(
-                settings=self.settings, source_path=self.source_path
-            )
+            tech_db = TechnologyCostDatabase(source_path=self.source_path)
             return tech_db.get_construction_time(self)
         else:
             return self.construction_time
@@ -95,8 +91,8 @@ class Nuclear(ConversionTechnology):
         Return the conversion factor of nuclear.
 
         """
-        eurostat_db = Eurostat(settings=self.settings, source_path=self.source_path)
-        efficiencies = eurostat_db.get_efficiencies()
+        eurostat_db = Eurostat(source_path=self.source_path)
+        efficiencies = eurostat_db.get_efficiencies(self)
         efficiency = efficiencies.get(self.name, None)
         if efficiency is None:
             raise ValueError(
@@ -128,9 +124,7 @@ class Nuclear(ConversionTechnology):
         Returns:
             Attribute: An Attribute object containing the specific capex data.
         """
-        tech_db = TechnologyCostDatabase(
-            settings=self.settings, source_path=self.source_path
-        )
+        tech_db = TechnologyCostDatabase(source_path=self.source_path)
         return tech_db.get_capex_specific_conversion(self)
 
     def _set_opex_specific_fixed(self) -> Attribute:
@@ -140,9 +134,7 @@ class Nuclear(ConversionTechnology):
         Returns:
             Attribute: An Attribute object containing the specific fixed opex data.
         """
-        tech_db = TechnologyCostDatabase(
-            settings=self.settings, source_path=self.source_path
-        )
+        tech_db = TechnologyCostDatabase(source_path=self.source_path)
         return tech_db.get_opex_specific_fixed(self)
 
     def _set_opex_specific_variable(self) -> Attribute:
@@ -152,9 +144,7 @@ class Nuclear(ConversionTechnology):
         Returns:
             Attribute: An Attribute object containing the specific variable opex data.
         """
-        tech_db = TechnologyCostDatabase(
-            settings=self.settings, source_path=self.source_path
-        )
+        tech_db = TechnologyCostDatabase(source_path=self.source_path)
         return tech_db.get_opex_specific_variable(self)
 
     def _set_capacity_existing(self) -> Attribute:
@@ -227,8 +217,6 @@ class Nuclear(ConversionTechnology):
         attr = potencia_db.get_max_load(self)
         if self.settings.max_load.use_seasonal_nuclear_max_load:
             nuclear_max_load = NuclearMaxLoad(
-                settings=self.settings,
-                set_nodes=self.model.config.system.set_nodes,
                 source_path=self.source_path,
             )
             nodal_ml_df, total_ml_df = nuclear_max_load.get_max_load(self)

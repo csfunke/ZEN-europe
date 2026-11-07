@@ -13,7 +13,6 @@ import pandas as pd
 
 if TYPE_CHECKING:
     from zen_creator import Element, Technology
-    from zen_creator.utils.settings import Settings
 
 from zen_creator import Attribute
 from zen_creator.datasets.datasets.dataset import Dataset
@@ -175,8 +174,7 @@ class PanEuropeanClimateDatabase(Dataset[dict[str, pd.DataFrame]]):
         ),
     }
 
-    def __init__(self, settings: Settings, source_path: Path | str | None = None):
-        self.settings = settings
+    def __init__(self, source_path: Path | str | None = None) -> None:
         super().__init__(source_path=source_path)
 
     def _set_metadata(self) -> MetaData:
@@ -199,20 +197,33 @@ class PanEuropeanClimateDatabase(Dataset[dict[str, pd.DataFrame]]):
         return Path(self.source_path) / "03-technology" / "climate_data"
 
     def _set_data(self) -> dict[str, pd.DataFrame]:
-        year = self.settings.time.resolved_weather_year
+        return {}
+
+    def _get_for_element(self, technology: str, element: Element) -> pd.DataFrame:
+        """Load one technology for the element's resolved weather year."""
+        year = element.settings.time.resolved_weather_year
         require_acceptable_year(
             dataset_name=self.name,
             setting_name="weather_year",
             year=year,
             acceptable_years=self.ACCEPTABLE_YEARS,
         )
-        return {
-            technology: self._get_technology_data(technology, request, year)
-            for technology, request in self.TECHNOLOGY_REQUESTS.items()
-        }
+        request = self.TECHNOLOGY_REQUESTS[technology]
+        overwrite = element.settings.cache.overwrite_pan_european_climate_database
+        key = f"{technology}:{year}"
+        if overwrite or key not in self.data:
+            self.data[key] = self._get_technology_data(
+                technology, request, year, overwrite=overwrite
+            )
+        return self.data[key]
 
     def _get_technology_data(
-        self, technology: str, request: _TechnologyRequest, year: int
+        self,
+        technology: str,
+        request: _TechnologyRequest,
+        year: int,
+        *,
+        overwrite: bool = False,
     ) -> pd.DataFrame:
         """Return `technology`'s hourly NUTS0 series for `year`.
 
@@ -224,22 +235,16 @@ class PanEuropeanClimateDatabase(Dataset[dict[str, pd.DataFrame]]):
         """
         identity = f"{self.PECD_VERSION}_{request['file_version']}_{technology}_{year}"
         cache_path = self.path / f"pecd_data_{identity}.feather"
-        if (
-            cache_path.exists()
-            and not self.settings.cache.overwrite_pan_european_climate_database
-        ):
+        if cache_path.exists() and not overwrite:
             cached = pd.read_feather(cache_path)
             return cached.set_index(cached.columns[0])
 
         zip_path = self.path / f"{identity}_raw.zip"
-        if (
-            self.settings.cache.overwrite_pan_european_climate_database
-            or not zip_path.exists()
-        ):
+        if overwrite or not zip_path.exists():
             self._download(request, year, zip_path)
 
         data = self._parse_zip(zip_path)
-        data = self._aggregate_to_nuts0(technology, data)
+        data = self._aggregate_to_nuts0(technology, data, overwrite=overwrite)
         if technology in {"photovoltaics", "wind_onshore", "wind_offshore"}:
             data = canonicalize_hourly_year(
                 data, year=year, dataset_name=f"{self.name}.{technology}"
@@ -296,7 +301,9 @@ class PanEuropeanClimateDatabase(Dataset[dict[str, pd.DataFrame]]):
                     csv_file, comment="#", index_col=["Date"], parse_dates=["Date"]
                 )
 
-    def _aggregate_to_nuts0(self, technology: str, data: pd.DataFrame) -> pd.DataFrame:
+    def _aggregate_to_nuts0(
+        self, technology: str, data: pd.DataFrame, *, overwrite: bool = False
+    ) -> pd.DataFrame:
         """Aggregate `data`'s PECD-region columns into NUTS0-country columns.
 
         `photovoltaics` is already downloaded at nuts_0 resolution and passes
@@ -312,15 +319,15 @@ class PanEuropeanClimateDatabase(Dataset[dict[str, pd.DataFrame]]):
             "pumped_hydro",
         }:
             return self._aggregate_hydro_to_nuts0(data)
-        return self._aggregate_wind_to_nuts0(technology, data)
+        return self._aggregate_wind_to_nuts0(technology, data, overwrite=overwrite)
 
     def _aggregate_wind_to_nuts0(
-        self, technology: str, data: pd.DataFrame
+        self, technology: str, data: pd.DataFrame, *, overwrite: bool = False
     ) -> pd.DataFrame:
         """Capacity-weighted average of PEON/PEOF regional columns into NUTS0
         columns -- the same `Weight_in_aggregation`/sum/divide procedure as
         ECMWF/ENTSO-E's own aggregation notebook (see class docstring)."""
-        weights = self._get_wind_weights(technology)
+        weights = self._get_wind_weights(technology, overwrite=overwrite)
         weights = weights[weights["Weight_in_aggregation"] > 0]
         if technology == "wind_offshore":
             weights = weights.assign(NUTS0=weights["NUTS0"].str.removesuffix("_OFF"))
@@ -342,13 +349,12 @@ class PanEuropeanClimateDatabase(Dataset[dict[str, pd.DataFrame]]):
         country_weight = region_weight.groupby(region_to_country).sum()
         return aggregated.divide(country_weight, axis=1)
 
-    def _get_wind_weights(self, technology: str) -> pd.DataFrame:
+    def _get_wind_weights(
+        self, technology: str, *, overwrite: bool = False
+    ) -> pd.DataFrame:
         filename, url = self._WIND_WEIGHT_SOURCES[technology]
         weight_path = self.path / filename
-        if (
-            self.settings.cache.overwrite_pan_european_climate_database
-            or not weight_path.exists()
-        ):
+        if overwrite or not weight_path.exists():
             self._download_file(url, weight_path)
         return pd.read_csv(weight_path)
 
@@ -408,11 +414,7 @@ class PanEuropeanClimateDatabase(Dataset[dict[str, pd.DataFrame]]):
         Returns:
             pd.Series: A pandas Series containing the maximum load data.
         """
-        assert element.name in self.data, (
-            f"Maximum load data for {element.name} is not available in the "
-            "PanEuropeanClimateDatabase dataset."
-        )
-        data = self.data[element.name]
+        data = self._get_for_element(element.name, element)
         model_nodes = pd.Index(element.model.config.system.set_nodes)
         common_nodes = data.columns.intersection(model_nodes)
         missing_nodes = model_nodes.difference(common_nodes)
@@ -458,8 +460,9 @@ class PanEuropeanClimateDatabase(Dataset[dict[str, pd.DataFrame]]):
         # PECD's installed-capacity category is "Run-of-River and pondage".
         # Combine both generation indicators so the numerator uses exactly the
         # same technology boundary as the capacity denominator.
-        data = self.data["run-of-river_hydro"].add(
-            self.data["run-of-river_with_pondage_hydro"], fill_value=0
+        data = self._get_for_element("run-of-river_hydro", element).add(
+            self._get_for_element("run-of-river_with_pondage_hydro", element),
+            fill_value=0,
         )
         common_nodes = data.columns.intersection(element.model.config.system.set_nodes)
         missing_nodes = set(element.model.config.system.set_nodes).difference(

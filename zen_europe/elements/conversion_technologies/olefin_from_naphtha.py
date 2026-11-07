@@ -138,9 +138,7 @@ class OlefinFromNaphtha(ConversionTechnology):
 
         """
         if self.settings.investment.use_existing_capacities:
-            olefin_dataset = OlefinDemand(
-                source_path=self.source_path, settings=self.settings
-            )
+            olefin_dataset = OlefinDemand(source_path=self.source_path)
             return olefin_dataset.get_capacity_existing_olefin(self)
         else:
             attr = self.capacity_existing

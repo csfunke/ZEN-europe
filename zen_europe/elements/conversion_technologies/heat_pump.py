@@ -62,9 +62,7 @@ class HeatPump(ConversionTechnology):
         Sets the lifetime of heat pumps.
 
         """
-        tech_db = TechnologyCostDatabase(
-            settings=self.settings, source_path=self.source_path
-        )
+        tech_db = TechnologyCostDatabase(source_path=self.source_path)
         return tech_db.get_lifetime(self)
 
     def _set_conversion_factor(self) -> Attribute:
@@ -73,10 +71,11 @@ class HeatPump(ConversionTechnology):
 
         """
         attr = self.conversion_factor
-        when2heat_dataset = When2Heat(
-            settings=self.settings, source_path=self.source_path
+        when2heat_dataset = When2Heat(source_path=self.source_path)
+        cop_data = when2heat_dataset.get_COP(
+            self.settings.time.resolved_weather_year,
+            overwrite=self.settings.cache.overwrite_when2heat,
         )
-        cop_data = when2heat_dataset.get_COP()
         cop = cast(pd.DataFrame, cop_data.xs("floor", level=1, axis=1))
         cop.index.name = "time"
         cf = [
@@ -118,9 +117,7 @@ class HeatPump(ConversionTechnology):
         Returns:
             Attribute: An Attribute object containing the specific capex data.
         """
-        tech_db = TechnologyCostDatabase(
-            settings=self.settings, source_path=self.source_path
-        )
+        tech_db = TechnologyCostDatabase(source_path=self.source_path)
         return tech_db.get_capex_specific_conversion(self)
 
     def _set_opex_specific_fixed(self) -> Attribute:
@@ -130,9 +127,7 @@ class HeatPump(ConversionTechnology):
         Returns:
             Attribute: An Attribute object containing the specific fixed opex data.
         """
-        tech_db = TechnologyCostDatabase(
-            settings=self.settings, source_path=self.source_path
-        )
+        tech_db = TechnologyCostDatabase(source_path=self.source_path)
         return tech_db.get_opex_specific_fixed(self)
 
     def _set_opex_specific_variable(self) -> Attribute:
@@ -142,9 +137,7 @@ class HeatPump(ConversionTechnology):
         Returns:
             Attribute: An Attribute object containing the specific variable opex data.
         """
-        tech_db = TechnologyCostDatabase(
-            settings=self.settings, source_path=self.source_path
-        )
+        tech_db = TechnologyCostDatabase(source_path=self.source_path)
         return tech_db.get_opex_specific_variable(self)
 
     def _set_capacity_existing(self) -> Attribute:
@@ -155,9 +148,7 @@ class HeatPump(ConversionTechnology):
             Attribute: An Attribute object containing the existing capacity data.
         """
         if self.settings.investment.use_existing_capacities:
-            heat_demand_dataset = HeatDemand(
-                settings=self.settings, source_path=self.source_path
-            )
+            heat_demand_dataset = HeatDemand(source_path=self.source_path)
             return heat_demand_dataset.get_capacity_existing(self)
         else:
             attr = self.capacity_existing
@@ -177,9 +168,7 @@ class HeatPump(ConversionTechnology):
         Returns:
             Attribute: An Attribute object containing the maximum load data.
         """
-        heat_demand_dataset = HeatDemand(
-            settings=self.settings, source_path=self.source_path
-        )
+        heat_demand_dataset = HeatDemand(source_path=self.source_path)
 
         return heat_demand_dataset.get_max_load(self)
 

@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 class NUTSshp(Dataset[pd.DataFrame]):
     name = "nuts_shp"
 
-    def __init__(self, source_path: Path | str):
+    def __init__(self, source_path: Path | str | None = None) -> None:
         super().__init__(source_path=source_path)
 
     def _set_metadata(self) -> MetaData:

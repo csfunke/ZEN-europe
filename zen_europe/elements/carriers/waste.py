@@ -40,7 +40,7 @@ class Waste(Carrier):
         if self.settings.availability.cap_waste_import:
             include_industry = "cement" in self.model.sectors
             carrier_availability = CarrierAvailability(
-                settings=self.settings, source_path=self.model.source_path
+                source_path=self.model.source_path
             )
             return carrier_availability.get_waste_availability(
                 element=self, include_industry=include_industry

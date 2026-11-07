@@ -197,7 +197,9 @@ class PassengerCarsCox(Dataset[pd.DataFrame]):
         # only read when the parameters are not already cached on disk
         self._driving_cycle: np.ndarray | None = None
         super().__init__(source_path=source_path)
-        self.get_inflation_rate = ECBInflation().get_inflation_rate
+        self.get_inflation_rate = ECBInflation(
+            source_path=self.source_path
+        ).get_inflation_rate
 
     def _set_metadata(self) -> MetaData:
         return MetaData(

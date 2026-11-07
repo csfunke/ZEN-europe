@@ -69,9 +69,7 @@ class WindOffshore(ConversionTechnology):
         Sets the lifetime of wind offshore.
 
         """
-        lifetime_expectation = LifetimeExpectation(
-            settings=self.settings, source_path=self.source_path
-        )
+        lifetime_expectation = LifetimeExpectation(source_path=self.source_path)
         return lifetime_expectation.get_lifetime(self)
 
     def _set_construction_time(self) -> Attribute:
@@ -80,9 +78,7 @@ class WindOffshore(ConversionTechnology):
 
         """
         if self.settings.investment.use_construction_times:
-            tech_db = TechnologyCostDatabase(
-                settings=self.settings, source_path=self.source_path
-            )
+            tech_db = TechnologyCostDatabase(source_path=self.source_path)
             return tech_db.get_construction_time(self)
         else:
             return self.construction_time
@@ -111,9 +107,7 @@ class WindOffshore(ConversionTechnology):
         Returns:
             Attribute: An Attribute object containing the specific capex data.
         """
-        tech_db = TechnologyCostDatabase(
-            settings=self.settings, source_path=self.source_path
-        )
+        tech_db = TechnologyCostDatabase(source_path=self.source_path)
         return tech_db.get_capex_specific_conversion(self)
 
     def _set_opex_specific_fixed(self) -> Attribute:
@@ -123,9 +117,7 @@ class WindOffshore(ConversionTechnology):
         Returns:
             Attribute: An Attribute object containing the specific fixed opex data.
         """
-        tech_db = TechnologyCostDatabase(
-            settings=self.settings, source_path=self.source_path
-        )
+        tech_db = TechnologyCostDatabase(source_path=self.source_path)
         return tech_db.get_opex_specific_fixed(self)
 
     def _set_opex_specific_variable(self) -> Attribute:
@@ -135,9 +127,7 @@ class WindOffshore(ConversionTechnology):
         Returns:
             Attribute: An Attribute object containing the specific variable opex data.
         """
-        tech_db = TechnologyCostDatabase(
-            settings=self.settings, source_path=self.source_path
-        )
+        tech_db = TechnologyCostDatabase(source_path=self.source_path)
         return tech_db.get_opex_specific_variable(self)
 
     def _set_capacity_limit(self) -> Attribute:
@@ -178,9 +168,7 @@ class WindOffshore(ConversionTechnology):
         Returns:
             Attribute: An Attribute object containing the maximum load data.
         """
-        pecd = PanEuropeanClimateDatabase(
-            settings=self.settings, source_path=self.source_path
-        )
+        pecd = PanEuropeanClimateDatabase(source_path=self.source_path)
         return pecd.get_max_load(self)
 
     def _set_max_diffusion_rate(self) -> Attribute:

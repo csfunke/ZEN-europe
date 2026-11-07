@@ -1,5 +1,6 @@
 ﻿from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import time
@@ -9,9 +10,9 @@ from typing import cast
 
 import pandas as pd
 import requests
+from zen_creator import Element
 from zen_creator.datasets.datasets.dataset import Dataset
 from zen_creator.datasets.datasets.metadata import MetaData
-from zen_creator.utils.settings import Settings
 
 from zen_europe.utils.utils import (
     convert_country_names,
@@ -110,9 +111,7 @@ class UNECE(Dataset[dict[str, pd.DataFrame]]):
 
     name = "unece"
 
-    def __init__(self, settings: Settings, source_path: Path | str | None = None):
-        self.settings = settings
-        self.unece_year = self.settings.time.reference_year - 1
+    def __init__(self, source_path: Path | str | None = None) -> None:
         super().__init__(source_path=source_path)
 
     def _set_metadata(self) -> MetaData:
@@ -135,34 +134,53 @@ class UNECE(Dataset[dict[str, pd.DataFrame]]):
         return None
 
     def _set_data(self) -> dict[str, pd.DataFrame]:
-        return {table: self._load_raw_data(table) for table in _UNECE_TABLES}
+        return {}
+
+    def _prepare_request(self, element: Element, table: str, vehicle_type: str) -> None:
+        """Load the requested table slice for the current model."""
+        nodes = sorted(set(element.model.config.system.set_nodes))
+        year = element.settings.time.reference_year - 1
+        self.data[table] = self._load_raw_data(
+            table=table,
+            vehicle_type=vehicle_type,
+            nodes=nodes,
+            year=year,
+            overwrite=element.settings.cache.overwrite_unece,
+        )
 
     # -------- disk cache ------------------
 
-    def _cache_path(self, table: str) -> Path:
-        """Path to the on-disk cache file for one raw UNECE table."""
+    def _cache_path(
+        self, table: str, vehicle_type: str, nodes: list[str], year: int
+    ) -> Path:
+        """Path to one request-specific UNECE cache file."""
         if self.source_path is None:
             raise ValueError("source_path must be set to cache UNECE data.")
+        identity = hashlib.sha1(
+            json.dumps([vehicle_type, nodes, year]).encode()
+        ).hexdigest()[:12]
         return (
             Path(self.source_path)
             / "03-technology"
             / "capacity_existing"
             / "transport"
             / "unece"
-            / f"{table}.feather"
+            / table
+            / f"{year}_{identity}.feather"
         )
 
-    def _cached_table(self, table: str) -> pd.DataFrame:
-        """Return one full raw UNECE table, querying and caching it on first
-        use.
+    def _cached_table(
+        self,
+        table: str,
+        vehicle_type: str,
+        nodes: list[str],
+        year: int,
+        overwrite: bool,
+    ) -> pd.DataFrame:
+        """Return one request-specific table slice, querying it once."""
+        cache_path = self._cache_path(table, vehicle_type, nodes, year)
 
-        The unprocessed table (all vehicle categories, countries and years) is
-        cached, so that changing the reference year or the set of nodes does
-        not require another download.
-        """
-        cache_path = self._cache_path(table)
-
-        if cache_path.exists() and not self.settings.cache.overwrite_unece:
+        if cache_path.exists() and not overwrite:
             logger.info(f"Loading cached UNECE data for '{table}' from {cache_path}")
             data = pd.read_feather(cache_path).set_index(
                 ["vehicle_type", "fuel_type", "country"]
@@ -171,7 +189,9 @@ class UNECE(Dataset[dict[str, pd.DataFrame]]):
             return data
 
         logger.info(f"Querying UNECE for '{table}' (this may take a while)...")
-        data = self._query_table(_UNECE_TABLES[table])
+        data = self._query_table(
+            _UNECE_TABLES[table], vehicle_type=vehicle_type, nodes=nodes, year=year
+        )
 
         cache_path.parent.mkdir(parents=True, exist_ok=True)
         reset = data.reset_index()
@@ -181,21 +201,58 @@ class UNECE(Dataset[dict[str, pd.DataFrame]]):
 
     # -------- API queries ------------------
 
-    def _query_table(self, table_id: str) -> pd.DataFrame:
-        """Query one full PXWeb table, one vehicle category at a time."""
+    def _query_table(
+        self, table_id: str, *, vehicle_type: str, nodes: list[str], year: int
+    ) -> pd.DataFrame:
+        """Query one category, the modeled countries, and required years."""
         url = f"{_UNECE_API_BASE}/{table_id}"
         metadata = self._request(url).json()
-        vehicle_types = next(
-            variable
-            for variable in metadata["variables"]
-            if variable["code"] == "Type of Vehicle"
+        variables = {variable["code"]: variable for variable in metadata["variables"]}
+        vehicle_types = variables["Type of Vehicle"]
+        vehicle_value = next(
+            (
+                value
+                for value, label in zip(
+                    vehicle_types["values"],
+                    vehicle_types["valueTexts"],
+                    strict=True,
+                )
+                if label == vehicle_type
+            ),
+            None,
         )
+        if vehicle_value is None:
+            raise ValueError(f"UNECE vehicle category is unavailable: {vehicle_type}")
 
-        data = pd.concat(
-            self._query_vehicle_type(url, vehicle_type)
-            for vehicle_type in vehicle_types["values"]
+        countries = variables["Country"]
+        country_nodes = convert_country_names(pd.Series(countries["valueTexts"]))
+        country_values = [
+            value
+            for value, node in zip(countries["values"], country_nodes, strict=True)
+            if node in nodes
+        ]
+        years = variables["Year"]
+        year_values = sorted(
+            (
+                (int(label), value)
+                for value, label in zip(
+                    years["values"], years["valueTexts"], strict=True
+                )
+            ),
+            key=lambda item: item[0],
         )
-        data = data.unstack("Year")
+        requested_years = [value for label, value in year_values if label <= year]
+        later_year = next((value for label, value in year_values if label > year), None)
+        if later_year is not None:
+            requested_years.append(later_year)
+
+        series = self._query_vehicle_type(
+            url,
+            vehicle_value,
+            country_values=country_values,
+            years=requested_years,
+        )
+        data = cast(pd.DataFrame, series.unstack("Year"))
         data.columns = data.columns.astype(int)
         data = data.rename_axis(
             index={
@@ -210,9 +267,15 @@ class UNECE(Dataset[dict[str, pd.DataFrame]]):
         )
         return data.sort_index()
 
-    def _query_vehicle_type(self, url: str, vehicle_type: str) -> pd.Series:
-        """Query all fuel types, countries and years of one vehicle category,
-        and return them as a series indexed by the table dimensions."""
+    def _query_vehicle_type(
+        self,
+        url: str,
+        vehicle_type: str,
+        *,
+        country_values: list[str],
+        years: list[str],
+    ) -> pd.Series:
+        """Query one category for selected countries and years."""
         query = {
             "query": [
                 {"code": "Fuel Type", "selection": {"filter": "all", "values": ["*"]}},
@@ -220,8 +283,14 @@ class UNECE(Dataset[dict[str, pd.DataFrame]]):
                     "code": "Type of Vehicle",
                     "selection": {"filter": "item", "values": [vehicle_type]},
                 },
-                {"code": "Country", "selection": {"filter": "all", "values": ["*"]}},
-                {"code": "Year", "selection": {"filter": "all", "values": ["*"]}},
+                {
+                    "code": "Country",
+                    "selection": {"filter": "item", "values": country_values},
+                },
+                {
+                    "code": "Year",
+                    "selection": {"filter": "item", "values": years},
+                },
             ],
             "response": {"format": "json-stat2"},
         }
@@ -267,7 +336,15 @@ class UNECE(Dataset[dict[str, pd.DataFrame]]):
 
     # -------- raw data ------------------
 
-    def _load_raw_data(self, table: str) -> pd.DataFrame:
+    def _load_raw_data(
+        self,
+        *,
+        table: str,
+        vehicle_type: str,
+        nodes: list[str],
+        year: int,
+        overwrite: bool,
+    ) -> pd.DataFrame:
         """Return one raw UNECE table, restricted to the modelled nodes and to
         the years up to the reference year.
 
@@ -277,27 +354,25 @@ class UNECE(Dataset[dict[str, pd.DataFrame]]):
         gap is closed with the closest reported years even if one of them lies
         beyond the cutoff.
         """
-        data = self._cached_table(table)
+        data = self._cached_table(table, vehicle_type, nodes, year, overwrite)
 
         countries = data.index.get_level_values("country")
-        nodes = convert_country_names(pd.Series(countries)).to_numpy()
-        is_node = pd.notna(nodes)
+        node_values = convert_country_names(pd.Series(countries)).to_numpy()
+        is_node = pd.notna(node_values)
         data = data[is_node].copy()
         data.index = pd.MultiIndex.from_arrays(
             [
                 data.index.get_level_values("vehicle_type"),
                 data.index.get_level_values("fuel_type"),
-                nodes[is_node],
+                node_values[is_node],
             ],
             names=_INDEX_NAMES,
         )
 
         data = data.interpolate(method="index", axis=1)
-        data = data.loc[:, data.columns <= self.unece_year]
+        data = data[[column for column in data.columns if int(column) <= year]]
         if data.empty:
-            raise ValueError(
-                f"The UNECE table '{table}' has no data up to {self.unece_year}."
-            )
+            raise ValueError(f"The UNECE table '{table}' has no data up to {year}.")
         return data.sort_index()
 
     # -------- outward-facing accessors ------------------
@@ -313,7 +388,9 @@ class UNECE(Dataset[dict[str, pd.DataFrame]]):
         return self.data[table]
 
     @instance_cache
-    def get_registrations(self, hybrids_separate: bool = False) -> pd.DataFrame:
+    def get_registrations(
+        self, element: Element, hybrids_separate: bool = False
+    ) -> pd.DataFrame:
         """New passenger car registrations per technology, node and year.
 
         Args:
@@ -325,13 +402,18 @@ class UNECE(Dataset[dict[str, pd.DataFrame]]):
             The registrations indexed by technology and node, with the years as
             columns.
         """
+        self._prepare_request(
+            element, "registrations", _PASSENGER_CARS["registrations"]
+        )
         aggregated, total = self.get_passenger_vehicles(
             "registrations", hybrids_separate
         )
         return self._allocate_unassigned_vehicles(aggregated, total, hybrids_separate)
 
     @instance_cache
-    def get_fleet(self, hybrids_separate: bool = False) -> pd.DataFrame:
+    def get_fleet(
+        self, element: Element, hybrids_separate: bool = False
+    ) -> pd.DataFrame:
         """Passenger car fleet per technology, node and year.
 
         Args:
@@ -343,11 +425,14 @@ class UNECE(Dataset[dict[str, pd.DataFrame]]):
             The fleet indexed by technology and node, with the years as
             columns.
         """
+        self._prepare_request(element, "fleet", _PASSENGER_CARS["fleet"])
         aggregated, total = self.get_passenger_vehicles("fleet", hybrids_separate)
         return self._allocate_unassigned_vehicles(aggregated, total, hybrids_separate)
 
     @instance_cache
-    def get_total_fleet(self, hybrids_separate: bool = False) -> pd.DataFrame:
+    def get_total_fleet(
+        self, element: Element, hybrids_separate: bool = False
+    ) -> pd.DataFrame:
         """Total passenger car fleet per node and year, excluding the
         drivetrains that are not modelled.
 
@@ -355,32 +440,36 @@ class UNECE(Dataset[dict[str, pd.DataFrame]]):
             hybrids_separate: Whether hybrids (HEV) and plug-in hybrids (PHEV)
                 are modelled as separate technologies.
         """
+        self._prepare_request(element, "fleet", _PASSENGER_CARS["fleet"])
         aggregated, total = self.get_passenger_vehicles("fleet", hybrids_separate)
         return self._reconcile_total(aggregated, total)
 
     @instance_cache
-    def get_truck_registrations(self) -> pd.DataFrame:
+    def get_truck_registrations(self, element: Element) -> pd.DataFrame:
         """New heavy-duty truck registrations per technology, node and year.
 
         Returns:
             The registrations indexed by technology and node, with the years as
             columns.
         """
+        self._prepare_request(element, "registrations", _LORRIES["registrations"])
         return self.get_trucks("registrations")[0]
 
     @instance_cache
-    def get_truck_fleet(self) -> pd.DataFrame:
+    def get_truck_fleet(self, element: Element) -> pd.DataFrame:
         """Heavy-duty truck fleet per technology, node and year.
 
         Returns:
             The fleet indexed by technology and node, with the years as
             columns.
         """
+        self._prepare_request(element, "fleet", _LORRIES["fleet"])
         return self.get_trucks("fleet")[0]
 
     @instance_cache
-    def get_total_truck_fleet(self) -> pd.DataFrame:
+    def get_total_truck_fleet(self, element: Element) -> pd.DataFrame:
         """Total heavy-duty truck fleet per node and year."""
+        self._prepare_request(element, "fleet", _LORRIES["fleet"])
         return self._reconcile_total(*self.get_trucks("fleet"))
 
     def get_passenger_vehicles(

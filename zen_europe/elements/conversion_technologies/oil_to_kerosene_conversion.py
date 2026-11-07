@@ -106,9 +106,7 @@ class OilToKeroseneConversion(ConversionTechnology):
         """
         if self.settings.investment.use_existing_capacities:
             attr = self.capacity_existing
-            carr_ava = CarrierAvailability(
-                source_path=self.source_path, settings=self.settings
-            )
+            carr_ava = CarrierAvailability(source_path=self.source_path)
             demand = carr_ava.get_raw_kerosene_demand(self).iloc[:, 0]
             cumulative = demand.to_frame(name=self.settings.time.reference_year - 1)
             addition = calculate_capacity_addition_from_cumulative(

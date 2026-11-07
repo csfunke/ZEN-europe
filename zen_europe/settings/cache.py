@@ -70,7 +70,12 @@ CACHE_PROVIDERS = (
     CacheProvider(
         "entsoe",
         CacheArtifactKind.DOWNLOADED_SOURCE,
-        ("02-carrier/entsoe/*.feather", "02-carrier/entsoe/*.json"),
+        (
+            "02-carrier/entsoe/*.feather",
+            "02-carrier/entsoe/*.json",
+            "02-carrier/entsoe/**/*.feather",
+            "02-carrier/entsoe/**/*.json",
+        ),
     ),
     CacheProvider(
         "eurostat",
@@ -117,7 +122,10 @@ CACHE_PROVIDERS = (
     CacheProvider(
         "unece",
         CacheArtifactKind.DOWNLOADED_SOURCE,
-        ("03-technology/capacity_existing/transport/unece/*.feather",),
+        (
+            "03-technology/capacity_existing/transport/unece/*.feather",
+            "03-technology/capacity_existing/transport/unece/**/*.feather",
+        ),
     ),
     CacheProvider(
         "pan_european_climate_database",

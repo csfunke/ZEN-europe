@@ -192,9 +192,7 @@ class EnergySystemNuts0(EnergySystem):
                     ),
                 ),
             )
-        carbon_constraints = CarbonConstraints(
-            settings=self.settings, source_path=self.source_path
-        )
+        carbon_constraints = CarbonConstraints(source_path=self.source_path)
         return carbon_constraints.calculate_carbon_budget(self)
 
     def _set_carbon_emissions_annual_limit(self) -> Attribute:
@@ -213,7 +211,5 @@ class EnergySystemNuts0(EnergySystem):
                     ),
                 ),
             )
-        carbon_constraints = CarbonConstraints(
-            settings=self.settings, source_path=self.source_path
-        )
+        carbon_constraints = CarbonConstraints(source_path=self.source_path)
         return carbon_constraints.calculate_carbon_emissions_annual_limit(self)

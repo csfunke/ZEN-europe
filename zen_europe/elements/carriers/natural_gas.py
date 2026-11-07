@@ -45,7 +45,7 @@ class NaturalGas(Carrier):
 
         """
         natural_gas_availability = NaturalGasAvailability(
-            source_path=self.model.source_path, settings=self.settings
+            source_path=self.model.source_path
         )
         return natural_gas_availability.get_availability_import(element=self)
 

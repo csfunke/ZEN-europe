@@ -85,9 +85,7 @@ class PowerLine(TransportTechnology):
         TODO add offshore cost increase for power line
         """
         transport_costs = TransportTechnologiesCosts(
-            settings=self.settings,
             source_path=self.source_path,
-            set_nodes=self.model.config.system.set_nodes,
         )
         return transport_costs.get_capex_per_distance_transport(self)
 
@@ -119,11 +117,14 @@ class PowerLine(TransportTechnology):
                 ),
             )
         entsoe = ENTSOE(
-            settings=self.settings,
-            set_nodes=self.model.config.system.set_nodes,
             source_path=self.source_path,
         )
-        capacity_existing = entsoe.get_transmission_capacity()
+        capacity_existing = entsoe.get_transmission_capacity(
+            year=self.settings.time.reference_year - 1,
+            nodes=list(self.model.config.system.set_nodes),
+            monthly=self.settings.data_source.use_monthly_entsoe_ntc,
+            overwrite=self.settings.cache.overwrite_entsoe,
+        )
         # the cached queries of the platform can cover more countries than the
         # model, so only the edges of the model are kept
         set_edges = cast(pd.DataFrame, self.model.energy_system.set_edges.df)
@@ -169,9 +170,7 @@ class PowerLine(TransportTechnology):
                 ),
             )
         capacity_limit = PowerLineCapacityLimit(
-            settings=self.settings,
             source_path=self.source_path,
-            set_nodes=self.model.config.system.set_nodes,
         )
         return capacity_limit.get_capacity_limit(self)
 

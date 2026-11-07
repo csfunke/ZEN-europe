@@ -7,7 +7,6 @@ import pandas as pd
 from zen_creator import Attribute, ConversionTechnology, SourceInformation
 from zen_creator.datasets.datasets.dataset import Dataset
 from zen_creator.datasets.datasets.metadata import MetaData
-from zen_creator.utils.settings import Settings
 
 from zen_europe.utils.constants import Constants
 from zen_europe.utils.utils import convert_ISO3_to_ISO2, format_capacity_existing
@@ -33,8 +32,7 @@ class DACCapacitiesZurbriggen(Dataset[pd.DataFrame]):
         "wind + policy": {2030: 88e6, 2050: 1600e6},
     }
 
-    def __init__(self, settings: Settings, source_path: Path | str | None = None):
-        self.settings = settings
+    def __init__(self, source_path: Path | str | None = None) -> None:
         super().__init__(source_path=source_path)
 
     def _set_metadata(self) -> MetaData:
@@ -150,8 +148,8 @@ class DACCapacitiesZurbriggen(Dataset[pd.DataFrame]):
             .groupby(["node", "year_construction"])["Capacity"]
             .sum()
         )
-        if not self.settings.investment.set_future_CCS_investments:
-            reference_year = self.settings.time.reference_year
+        if not element.settings.investment.set_future_CCS_investments:
+            reference_year = element.settings.time.reference_year
             data = data[
                 data.index.get_level_values("year_construction") <= reference_year - 1
             ]

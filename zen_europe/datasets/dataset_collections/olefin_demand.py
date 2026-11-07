@@ -17,7 +17,6 @@ if TYPE_CHECKING:
 
 from zen_creator import Attribute, DatasetCollection
 from zen_creator.utils.attribute import SourceInformation
-from zen_creator.utils.settings import Settings
 
 from zen_europe.datasets.datasets.carrier.aidres import Aidres
 from zen_europe.datasets.datasets.carrier.eurostat import Eurostat
@@ -29,8 +28,7 @@ class OlefinDemand(DatasetCollection):
 
     name = "olefin_demand"
 
-    def __init__(self, settings: Settings, source_path: Path | str):
-        self.settings = settings
+    def __init__(self, source_path: Path | str | None = None) -> None:
         super().__init__(source_path=source_path)
 
     def _get_data(self) -> Dict[str, Dataset[Any]]:
@@ -41,7 +39,7 @@ class OlefinDemand(DatasetCollection):
 
         return {
             "aidres": Aidres(self.source_path),
-            "eurostat": Eurostat(source_path=self.source_path, settings=self.settings),
+            "eurostat": Eurostat(source_path=self.source_path),
         }
 
     def get_olefin_demand(self, element: Carrier) -> Attribute:
@@ -56,7 +54,7 @@ class OlefinDemand(DatasetCollection):
         """
         aidres_dataset = cast(Aidres, self.data["aidres"])
         eurostat_dataset = cast(Eurostat, self.data["eurostat"])
-        eurostat_data = eurostat_dataset.get_naphtha_demand()
+        eurostat_data = eurostat_dataset.get_naphtha_demand(element)
         common_countries = eurostat_data.index.intersection(
             element.model.config.system.set_nodes
         )
@@ -109,7 +107,7 @@ class OlefinDemand(DatasetCollection):
             Attribute: An Attribute object containing the existing capacity data.
         """
         eurostat_dataset = cast(Eurostat, self.data["eurostat"])
-        eurostat_data = eurostat_dataset.get_naphtha_demand()
+        eurostat_data = eurostat_dataset.get_naphtha_demand(element)
         eurostat_data = (
             eurostat_data / Constants.HOURS_PER_YEAR
         )  # convert from GWh/a to GWh/h

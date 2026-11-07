@@ -49,7 +49,7 @@ class HardCoal(Carrier):
         """
         if self.settings.availability.cap_coal_import:
             carrier_availability = CarrierAvailability(
-                settings=self.settings, source_path=self.model.source_path
+                source_path=self.model.source_path
             )
             return carrier_availability.get_coal_availability(element=self)
         else:

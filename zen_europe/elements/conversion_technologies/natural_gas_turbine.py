@@ -69,9 +69,7 @@ class NaturalGasTurbine(ConversionTechnology):
         Sets the lifetime of natural gas turbines.
 
         """
-        lifetime_expectation = LifetimeExpectation(
-            settings=self.settings, source_path=self.source_path
-        )
+        lifetime_expectation = LifetimeExpectation(source_path=self.source_path)
         return lifetime_expectation.get_lifetime(self)
 
     def _set_construction_time(self) -> Attribute:
@@ -80,9 +78,7 @@ class NaturalGasTurbine(ConversionTechnology):
 
         """
         if self.settings.investment.use_construction_times:
-            tech_db = TechnologyCostDatabase(
-                settings=self.settings, source_path=self.source_path
-            )
+            tech_db = TechnologyCostDatabase(source_path=self.source_path)
             return tech_db.get_construction_time(self)
         else:
             return self.construction_time
@@ -92,8 +88,8 @@ class NaturalGasTurbine(ConversionTechnology):
         Return the conversion factor of natural gas turbines.
 
         """
-        eurostat_db = Eurostat(settings=self.settings, source_path=self.source_path)
-        efficiencies = eurostat_db.get_efficiencies()
+        eurostat_db = Eurostat(source_path=self.source_path)
+        efficiencies = eurostat_db.get_efficiencies(self)
         efficiency = efficiencies.get(self.name, None)
         if efficiency is None:
             raise ValueError(
@@ -125,9 +121,7 @@ class NaturalGasTurbine(ConversionTechnology):
         Returns:
             Attribute: An Attribute object containing the specific capex data.
         """
-        tech_db = TechnologyCostDatabase(
-            settings=self.settings, source_path=self.source_path
-        )
+        tech_db = TechnologyCostDatabase(source_path=self.source_path)
         return tech_db.get_capex_specific_conversion(self)
 
     def _set_opex_specific_fixed(self) -> Attribute:
@@ -137,9 +131,7 @@ class NaturalGasTurbine(ConversionTechnology):
         Returns:
             Attribute: An Attribute object containing the specific fixed opex data.
         """
-        tech_db = TechnologyCostDatabase(
-            settings=self.settings, source_path=self.source_path
-        )
+        tech_db = TechnologyCostDatabase(source_path=self.source_path)
         return tech_db.get_opex_specific_fixed(self)
 
     def _set_opex_specific_variable(self) -> Attribute:
@@ -150,9 +142,7 @@ class NaturalGasTurbine(ConversionTechnology):
         Returns:
             Attribute: An Attribute object containing the specific variable opex data.
         """
-        tech_db = TechnologyCostDatabase(
-            settings=self.settings, source_path=self.source_path
-        )
+        tech_db = TechnologyCostDatabase(source_path=self.source_path)
         return tech_db.get_opex_specific_variable(self)
 
     def _set_capacity_existing(self) -> Attribute:

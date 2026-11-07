@@ -7,7 +7,6 @@ import numpy as np
 import pandas as pd
 from zen_creator import Attribute, DatasetCollection, EnergySystem
 from zen_creator.utils.attribute import SourceInformation
-from zen_creator.utils.settings import Settings
 
 from zen_europe.datasets.datasets.energy_system.desnz_ghg_inventory import (
     DESNZGreenhouseGasInventory,
@@ -50,8 +49,7 @@ class CarbonConstraints(DatasetCollection):
 
     name = "carbon_constraints"
 
-    def __init__(self, settings: Settings, source_path: Path | str):
-        self.settings = settings
+    def __init__(self, source_path: Path | str | None = None) -> None:
         super().__init__(source_path=source_path)
 
     def _get_data(self) -> Dict[str, Dataset[Any]]:
@@ -76,17 +74,17 @@ class CarbonConstraints(DatasetCollection):
         """
         Calculate the remaining carbon budget for the energy system.
         """
-        global_budget = self.get_remaining_global_carbon_budget()
+        global_budget = self.get_remaining_global_carbon_budget(energy_system)
         share = self.calculate_budget_share_egal(energy_system)
         budget_europe = global_budget * share
-        if not self.settings.emissions.correct_budget_with_global_emissions:
+        if not energy_system.settings.emissions.correct_budget_with_global_emissions:
             budget_europe = self.correct_budget_with_european_emissions(
                 energy_system, budget_europe
             )
         sector_share = self.calculate_sector_share(energy_system)
         year_sector_share = int(
-            self.settings.time.reference_year
-            if self.settings.time.reference_year in sector_share.index
+            energy_system.settings.time.reference_year
+            if energy_system.settings.time.reference_year in sector_share.index
             else sector_share.index[-1]
         )
         sector_budget = budget_europe * sector_share.loc[year_sector_share]
@@ -153,7 +151,7 @@ class CarbonConstraints(DatasetCollection):
         emissions_total_UK = desnz_ghg_inventory.get_emissions_total(sectors)
         return emissions_total_EU + emissions_total_UK
 
-    def get_remaining_global_carbon_budget(self) -> float:
+    def get_remaining_global_carbon_budget(self, energy_system: EnergySystem) -> float:
         """
         Get the remaining carbon budget for a given temperature target and probability.
 
@@ -162,18 +160,20 @@ class CarbonConstraints(DatasetCollection):
         since then and up to the reference year are deducted from it.
         """
         ipcc_ar6 = cast(IPCCAR6, self.data["ipcc_ar6"])
-        temperature_target = self.settings.emissions.temperature_increase
-        probability = self.settings.emissions.probability_carbon_budget
+        temperature_target = energy_system.settings.emissions.temperature_increase
+        probability = energy_system.settings.emissions.probability_carbon_budget
         budget_since_ar6_start_year = ipcc_ar6.get_remaining_carbon_budget(
             temperature_target=temperature_target, probability=probability
         )
-        if self.settings.emissions.correct_budget_with_global_emissions:
-            emitted_since_ar6_start_year = self.get_historic_global_emissions()
+        if energy_system.settings.emissions.correct_budget_with_global_emissions:
+            emitted_since_ar6_start_year = self.get_historic_global_emissions(
+                energy_system
+            )
             return budget_since_ar6_start_year - emitted_since_ar6_start_year
         else:
             return budget_since_ar6_start_year
 
-    def get_historic_global_emissions(self) -> float:
+    def get_historic_global_emissions(self, energy_system: EnergySystem) -> float:
         """
         Get the global CO2 emissions already emitted between the start of the
         IPCC AR6 carbon budget and the reference year of the model.
@@ -185,8 +185,10 @@ class CarbonConstraints(DatasetCollection):
         historic_emissions = self.extrapolate_historic_emissions(
             data=historic_emissions,
             start_year=IPCCAR6.AR6_BUDGET_START_YEAR,
-            end_year=self.settings.time.reference_year - 1,
-            extrapolate_missing_years=self.settings.emissions.extrapolate_missing_years,
+            end_year=energy_system.settings.time.reference_year - 1,
+            extrapolate_missing_years=(
+                energy_system.settings.emissions.extrapolate_missing_years
+            ),
         )
         return historic_emissions.sum()
 
@@ -197,8 +199,8 @@ class CarbonConstraints(DatasetCollection):
         """
         population = cast(WorldBankPopulation, self.data["worldbank_population"])
         set_nodes = energy_system.config.system.set_nodes
-        start_year = self.settings.time.reference_year
-        last_year = self.settings.time.last_year
+        start_year = energy_system.settings.time.reference_year
+        last_year = energy_system.settings.time.last_year
         share = population.get_population_share(set_nodes, start_year, last_year)
         return share
 
@@ -239,9 +241,10 @@ class CarbonConstraints(DatasetCollection):
         sector_emissions = self.calculate_sector_emissions(energy_system)
         emissions_1990 = sector_emissions.loc[EU_1990_REFERENCE_YEAR]
         anchor_year = min(
-            self.settings.time.reference_year - 1, max(sector_emissions.index)
+            energy_system.settings.time.reference_year - 1,
+            max(sector_emissions.index),
         )
-        last_year = self.settings.time.last_year
+        last_year = energy_system.settings.time.last_year
         target_years = pd.Index(
             [anchor_year, EU_2030_TARGET_YEAR, EU_2040_TARGET_YEAR, last_year],
             name="year",
@@ -254,7 +257,7 @@ class CarbonConstraints(DatasetCollection):
         ]
         trajectory = pd.Series(target_emissions, index=target_years)
 
-        optimization_years = pd.Index(self.settings.time.years, name="year")
+        optimization_years = pd.Index(energy_system.settings.time.years, name="year")
         trajectory = trajectory.reindex(
             optimization_years.union(target_years)
         ).interpolate(method="index")
@@ -273,8 +276,10 @@ class CarbonConstraints(DatasetCollection):
         european_emissions = self.extrapolate_historic_emissions(
             data=european_emissions,
             start_year=IPCCAR6.AR6_BUDGET_START_YEAR,
-            end_year=self.settings.time.reference_year - 1,
-            extrapolate_missing_years=self.settings.emissions.extrapolate_missing_years,
+            end_year=energy_system.settings.time.reference_year - 1,
+            extrapolate_missing_years=(
+                energy_system.settings.emissions.extrapolate_missing_years
+            ),
         )
         remaining_budget = budget_europe - european_emissions.sum()
         return remaining_budget

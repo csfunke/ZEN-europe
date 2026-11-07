@@ -10,7 +10,6 @@ import pandas as pd
 import requests
 from zen_creator.datasets.datasets.dataset import Dataset
 from zen_creator.datasets.datasets.metadata import MetaData
-from zen_creator.utils.settings import Settings
 
 from zen_europe.utils.time_series import (
     canonicalize_hourly_year,
@@ -29,8 +28,7 @@ class When2Heat(Dataset[dict[str, pd.DataFrame]]):
     )
     SOURCE_FILENAME = f"when2heat_{VERSION}.csv"
 
-    def __init__(self, settings: Settings, source_path: Path | str | None = None):
-        self.settings = settings
+    def __init__(self, source_path: Path | str | None = None) -> None:
         super().__init__(source_path=source_path)
 
     def _set_metadata(self) -> MetaData:
@@ -56,14 +54,26 @@ class When2Heat(Dataset[dict[str, pd.DataFrame]]):
         return path
 
     def _set_data(self) -> dict[str, pd.DataFrame]:
-        year = self.settings.time.resolved_weather_year
+        return {}
+
+    def _get_year(
+        self, year: int, *, overwrite: bool = False
+    ) -> dict[str, pd.DataFrame]:
+        """Load and format one requested weather year."""
         require_acceptable_year(
             dataset_name=self.name,
             setting_name="weather_year",
             year=year,
             acceptable_years=self.ACCEPTABLE_YEARS,
         )
-        data = self._load_year(year)
+        key = str(year)
+        if key in self.data and not overwrite:
+            return {
+                "profile": self.data[f"profile:{key}"],
+                "COP": self.data[f"COP:{key}"],
+            }
+
+        data = self._load_year(year, overwrite=overwrite)
         timestamps = pd.DatetimeIndex(
             pd.to_datetime(data.pop("utc_timestamp"), utc=True)
         )
@@ -79,14 +89,17 @@ class When2Heat(Dataset[dict[str, pd.DataFrame]]):
         cop = canonicalize_hourly_year(
             data.loc[:, cop_columns], year=year, dataset_name=self.name
         )
-        return {
+        result = {
             "profile": self._format_profiles(profiles),
             "COP": self._format_cop(cop),
         }
+        self.data[f"profile:{key}"] = result["profile"]
+        self.data[f"COP:{key}"] = result["COP"]
+        self.data[key] = pd.DataFrame()
+        return result
 
-    def _load_year(self, year: int) -> pd.DataFrame:
+    def _load_year(self, year: int, *, overwrite: bool = False) -> pd.DataFrame:
         cache_path = self.path / f"when2heat_{self.VERSION}_{year}.feather"
-        overwrite = self.settings.cache.overwrite_when2heat
         if cache_path.exists() and not overwrite:
             return pd.read_feather(cache_path)
 
@@ -267,10 +280,10 @@ class When2Heat(Dataset[dict[str, pd.DataFrame]]):
         data.columns = pd.MultiIndex.from_tuples(columns, names=["node", "category"])
         return data.rename(columns={"GB": "UK", "GR": "EL"}, level="node")
 
-    def get_profiles(self) -> pd.DataFrame:
+    def get_profiles(self, year: int, overwrite: bool = False) -> pd.DataFrame:
         """Return normalized heat-demand profiles."""
-        return self.data["profile"]
+        return self._get_year(year, overwrite=overwrite)["profile"]
 
-    def get_COP(self) -> pd.DataFrame:
+    def get_COP(self, year: int, overwrite: bool = False) -> pd.DataFrame:
         """Return air-source heat-pump coefficients of performance."""
-        return self.data["COP"]
+        return self._get_year(year, overwrite=overwrite)["COP"]

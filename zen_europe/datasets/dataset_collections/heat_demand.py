@@ -24,7 +24,6 @@ from zen_creator import (
     Element,
 )
 from zen_creator.utils.attribute import SourceInformation
-from zen_creator.utils.settings import Settings
 
 from zen_europe.datasets.datasets.carrier.bfe import BFE
 from zen_europe.datasets.datasets.carrier.desnz import DESNZ
@@ -32,15 +31,16 @@ from zen_europe.datasets.datasets.carrier.energifaktanorge import Energifaktanor
 from zen_europe.datasets.datasets.carrier.eurostat import Eurostat
 from zen_europe.datasets.datasets.carrier.jrc_idees import JRCIDEES
 from zen_europe.datasets.datasets.carrier.when2heat import When2Heat
+from zen_europe.utils.time_series import require_acceptable_year
 
 
 class HeatDemand(DatasetCollection):
     """Extracting heat demand data."""
 
     name = "heat_demand"
+    ACCEPTABLE_YEARS = When2Heat.ACCEPTABLE_YEARS
 
-    def __init__(self, settings: Settings, source_path: Path | str):
-        self.settings = settings
+    def __init__(self, source_path: Path | str | None = None) -> None:
         super().__init__(source_path=source_path)
 
     def _get_data(self) -> Dict[str, Dataset[Any] | DatasetCollection]:
@@ -51,8 +51,8 @@ class HeatDemand(DatasetCollection):
 
         return {
             "jrc_idees": JRCIDEES(self.source_path),
-            "when2heat": When2Heat(self.settings, self.source_path),
-            "eurostat": Eurostat(self.settings, self.source_path),
+            "when2heat": When2Heat(self.source_path),
+            "eurostat": Eurostat(self.source_path),
             "desnz": DESNZ(self.source_path),
             "bfe": BFE(self.source_path),
             "energifaktanorge": Energifaktanorge(self.source_path),
@@ -89,6 +89,12 @@ class HeatDemand(DatasetCollection):
 
         """
 
+        require_acceptable_year(
+            element.settings.time.resolved_weather_year,
+            dataset_name=self.name,
+            setting_name="weather_year",
+            acceptable_years=self.ACCEPTABLE_YEARS,
+        )
         jrc_idees_dataset = cast(JRCIDEES, self.data["jrc_idees"])
         eurostat_dataset = cast(Eurostat, self.data["eurostat"])
         desnz_dataset = cast(DESNZ, self.data["desnz"])
@@ -104,7 +110,8 @@ class HeatDemand(DatasetCollection):
             elif country == "NO" or country == "UK":
                 # residential heat demand from Eurostat
                 data_res = cast(
-                    pd.Series, eurostat_dataset.get_total_heat_household().squeeze()
+                    pd.Series,
+                    eurostat_dataset.get_total_heat_household(element).squeeze(),
                 )
                 data_res = cast(pd.Series, data_res.loc[country])
                 # tertiary heat demand for UK from ECUK
@@ -121,7 +128,10 @@ class HeatDemand(DatasetCollection):
             data_jrc = pd.concat([data_jrc, data])
         # add heating profiles
         when2heat_dataset = cast(When2Heat, self.data["when2heat"])
-        profiles = when2heat_dataset.get_profiles()
+        profiles = when2heat_dataset.get_profiles(
+            element.settings.time.resolved_weather_year,
+            overwrite=element.settings.cache.overwrite_when2heat,
+        )
 
         # align jrc_idees's (node, sector, category) labels with when2heat's
         # (node, house_type, category) column naming convention
@@ -139,7 +149,7 @@ class HeatDemand(DatasetCollection):
         demand.index.name = "time"
         return demand
 
-    def _calculate_heating_share_household(self) -> pd.DataFrame:
+    def _calculate_heating_share_household(self, element: Element) -> pd.DataFrame:
         """
         Calculate the heating share of all household heating technologies.
 
@@ -148,10 +158,13 @@ class HeatDemand(DatasetCollection):
             for all household heating technologies.
         """
         eurostat_dataset = cast(Eurostat, self.data["eurostat"])
-        household_heat = eurostat_dataset.get_heat_household_technology()
+        household_heat = eurostat_dataset.get_heat_household_technology(element)
         # average COP
         when2heat_dataset = cast(When2Heat, self.data["when2heat"])
-        cop_data = when2heat_dataset.get_COP()
+        cop_data = when2heat_dataset.get_COP(
+            element.settings.time.resolved_weather_year,
+            overwrite=element.settings.cache.overwrite_when2heat,
+        )
         cop = cast(pd.DataFrame, cop_data.xs("floor", level="category", axis=1)).mean()
         common_nodes = cop.index.intersection(
             household_heat.index.get_level_values(1).unique()
@@ -183,15 +196,18 @@ class HeatDemand(DatasetCollection):
 
         return share_household_heat
 
-    def _calculate_heating_share_DH(self) -> pd.DataFrame:
+    def _calculate_heating_share_DH(self, element: Element) -> pd.DataFrame:
         """
         Calculate the heating share of electricity demand for district heating.
         """
         eurostat_dataset = cast(Eurostat, self.data["eurostat"])
-        district_heat = eurostat_dataset.get_heat_dh_technology()
+        district_heat = eurostat_dataset.get_heat_dh_technology(element)
         # average COP
         when2heat_dataset = cast(When2Heat, self.data["when2heat"])
-        cop_data = when2heat_dataset.get_COP()
+        cop_data = when2heat_dataset.get_COP(
+            element.settings.time.resolved_weather_year,
+            overwrite=element.settings.cache.overwrite_when2heat,
+        )
         cop = cast(pd.DataFrame, cop_data.xs("floor", level="category", axis=1)).mean()
         electricity_hp_dh = district_heat.loc["heat_pump_DH"].div(cop - 1, axis=0)
         electricity_hp_dh = electricity_hp_dh.fillna(0)
@@ -245,10 +261,10 @@ class HeatDemand(DatasetCollection):
         """
         heat_demand = self._calculate_demand(element)
         peak_demand = heat_demand.max()
-        heating_share = self._calculate_heating_share_household()
+        heating_share = self._calculate_heating_share_household(element)
         add_description = ""
         if is_dh:
-            heating_share_dh = self._calculate_heating_share_DH()
+            heating_share_dh = self._calculate_heating_share_DH(element)
             heating_share_dh_grid = heating_share.loc["district_heating_grid"]
             heating_share = heating_share_dh * heating_share_dh_grid
             heating_share = heating_share.loc[:, ~heating_share.isna().all(axis=0)]

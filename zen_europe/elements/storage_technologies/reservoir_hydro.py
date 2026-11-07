@@ -74,9 +74,7 @@ class ReservoirHydro(StorageTechnology):
         """
         Sets the specific capex of the power capacity of reservoir hydro.
         """
-        tech_db = TechnologyCostDatabase(
-            settings=self.settings, source_path=self.source_path
-        )
+        tech_db = TechnologyCostDatabase(source_path=self.source_path)
         return tech_db.get_capex_specific_storage(self)
 
     def _set_capex_specific_storage_energy(self) -> Attribute:
@@ -106,9 +104,7 @@ class ReservoirHydro(StorageTechnology):
         """
         Sets the specific fixed opex of reservoir hydro.
         """
-        tech_db = TechnologyCostDatabase(
-            settings=self.settings, source_path=self.source_path
-        )
+        tech_db = TechnologyCostDatabase(source_path=self.source_path)
         return tech_db.get_opex_specific_fixed(self)
 
     def _set_capacity_existing(self) -> Attribute:
@@ -133,7 +129,6 @@ class ReservoirHydro(StorageTechnology):
                 attr = hydro_dataset.get_capacity_existing(self)
             else:
                 hydro_capacities = HydropowerExistingCapacities(
-                    settings=self.settings,
                     source_path=self.source_path,
                 )
                 attr = hydro_capacities.get_capacity_existing(self)
@@ -171,7 +166,6 @@ class ReservoirHydro(StorageTechnology):
                 attr = hydro_dataset.get_capacity_existing(self, power=False)
             else:
                 hydro_capacities = HydropowerExistingCapacities(
-                    settings=self.settings,
                     source_path=self.source_path,
                 )
                 attr = hydro_capacities.get_capacity_existing_energy(self)
@@ -262,9 +256,7 @@ class ReservoirHydro(StorageTechnology):
         """
         Sets the storage inflow of reservoir hydro.
         """
-        hydropower_data = HydropowerExistingCapacities(
-            settings=self.settings, source_path=self.source_path
-        )
+        hydropower_data = HydropowerExistingCapacities(source_path=self.source_path)
         return hydropower_data.get_flow_storage_inflow(self)
 
     def _set_efficiency_charge(self) -> Attribute:

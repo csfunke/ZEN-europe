@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import inspect
 from pathlib import Path
 from typing import Any, cast
 
@@ -36,6 +37,13 @@ def test_all_exported_dataset_collections_are_collection_classes() -> None:
     assert collection_classes
     for collection_cls in collection_classes:
         assert issubclass(collection_cls, DatasetCollection)
+
+
+def test_all_exported_collections_have_stable_constructor_signatures() -> None:
+    """Every exported collection accepts only an optional source path."""
+    for collection_cls in _dataset_collection_classes():
+        parameters = list(inspect.signature(collection_cls.__init__).parameters)
+        assert parameters == ["self", "source_path"]
 
 
 # def test_all_exported_dataset_collections_construct_as_singletons(

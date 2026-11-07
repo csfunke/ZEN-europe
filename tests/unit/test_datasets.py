@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import inspect
 from pathlib import Path
 
 from zen_creator import Dataset
@@ -30,6 +31,13 @@ def test_all_exported_datasets_are_dataset_classes() -> None:
     assert dataset_classes
     for dataset_cls in dataset_classes:
         assert issubclass(dataset_cls, Dataset)
+
+
+def test_all_exported_datasets_have_stable_constructor_signatures() -> None:
+    """Every exported dataset accepts only an optional source path."""
+    for dataset_cls in _dataset_classes():
+        parameters = list(inspect.signature(dataset_cls.__init__).parameters)
+        assert parameters == ["self", "source_path"]
 
 
 # def test_all_exported_datasets_construct_as_singletons(tmp_path: Path) -> None:

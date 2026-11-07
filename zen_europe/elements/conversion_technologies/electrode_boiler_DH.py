@@ -65,9 +65,7 @@ class ElectrodeBoilerDH(ConversionTechnology):
         Sets the lifetime of district heating electrode boilers.
 
         """
-        tech_db = TechnologyCostDatabase(
-            settings=self.settings, source_path=self.source_path
-        )
+        tech_db = TechnologyCostDatabase(source_path=self.source_path)
         return tech_db.get_lifetime(self)
 
     def _set_conversion_factor(self) -> Attribute:
@@ -76,9 +74,7 @@ class ElectrodeBoilerDH(ConversionTechnology):
 
         """
         attr = self.conversion_factor
-        tech_db = TechnologyCostDatabase(
-            settings=self.settings, source_path=self.source_path
-        )
+        tech_db = TechnologyCostDatabase(source_path=self.source_path)
         eff, agencies = tech_db.get_efficiency(self)
         eff = eff.loc[self.settings.time.reference_year]
         cf = [{"electricity": {"default_value": 1 / eff, "unit": "GW/GW"}}]
@@ -119,9 +115,7 @@ class ElectrodeBoilerDH(ConversionTechnology):
         Returns:
             Attribute: An Attribute object containing the specific capex data.
         """
-        tech_db = TechnologyCostDatabase(
-            settings=self.settings, source_path=self.source_path
-        )
+        tech_db = TechnologyCostDatabase(source_path=self.source_path)
         return tech_db.get_capex_specific_conversion(self)
 
     def _set_opex_specific_fixed(self) -> Attribute:
@@ -132,9 +126,7 @@ class ElectrodeBoilerDH(ConversionTechnology):
         Returns:
             Attribute: An Attribute object containing the specific fixed opex data.
         """
-        tech_db = TechnologyCostDatabase(
-            settings=self.settings, source_path=self.source_path
-        )
+        tech_db = TechnologyCostDatabase(source_path=self.source_path)
         return tech_db.get_opex_specific_fixed(self)
 
     def _set_opex_specific_variable(self) -> Attribute:
@@ -145,9 +137,7 @@ class ElectrodeBoilerDH(ConversionTechnology):
         Returns:
             Attribute: An Attribute object containing the specific variable opex data.
         """
-        tech_db = TechnologyCostDatabase(
-            settings=self.settings, source_path=self.source_path
-        )
+        tech_db = TechnologyCostDatabase(source_path=self.source_path)
         return tech_db.get_opex_specific_variable(self)
 
     def _set_capacity_existing(self) -> Attribute:
@@ -158,9 +148,7 @@ class ElectrodeBoilerDH(ConversionTechnology):
             Attribute: An Attribute object containing the existing capacity data.
         """
         if self.settings.investment.use_existing_capacities:
-            heat_demand_dataset = HeatDemand(
-                settings=self.settings, source_path=self.source_path
-            )
+            heat_demand_dataset = HeatDemand(source_path=self.source_path)
             return heat_demand_dataset.get_capacity_existing(self, is_dh=True)
         else:
             attr = self.capacity_existing

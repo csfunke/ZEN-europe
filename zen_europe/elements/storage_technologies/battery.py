@@ -70,27 +70,21 @@ class Battery(StorageTechnology):
         """
         Sets the specific capex of the power capacity of battery.
         """
-        tech_db = TechnologyCostDatabase(
-            settings=self.settings, source_path=self.source_path
-        )
+        tech_db = TechnologyCostDatabase(source_path=self.source_path)
         return tech_db.get_capex_specific_storage(self)
 
     def _set_capex_specific_storage_energy(self) -> Attribute:
         """
         Sets the specific capex of the energy capacity of battery.
         """
-        tech_db = TechnologyCostDatabase(
-            settings=self.settings, source_path=self.source_path
-        )
+        tech_db = TechnologyCostDatabase(source_path=self.source_path)
         return tech_db.get_capex_specific_storage_energy(self)
 
     def _set_opex_specific_fixed(self) -> Attribute:
         """
         Sets the specific fixed opex of battery.
         """
-        tech_db = TechnologyCostDatabase(
-            settings=self.settings, source_path=self.source_path
-        )
+        tech_db = TechnologyCostDatabase(source_path=self.source_path)
         return tech_db.get_opex_specific_fixed(self)
 
     def _set_efficiency_charge(self) -> Attribute:

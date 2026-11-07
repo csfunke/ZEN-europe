@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING, Any, cast
 import numpy as np
 import pandas as pd
 from zen_creator import Attribute, DatasetCollection, SourceInformation
-from zen_creator.utils.settings import Settings
 
 from zen_europe.datasets.datasets.technology.DAC_capacities_zurbriggen import (
     DACCapacitiesZurbriggen,
@@ -52,8 +51,7 @@ class DACCosts(DatasetCollection):
         ),
     }
 
-    def __init__(self, settings: Settings, source_path: Path | str):
-        self.settings = settings
+    def __init__(self, source_path: Path | str | None = None) -> None:
         super().__init__(source_path=source_path)
 
     def _get_data(self) -> dict[str, Dataset[Any]]:
@@ -62,9 +60,7 @@ class DACCosts(DatasetCollection):
         return {
             "sievert": DACCostsSievert(source_path=self.source_path),
             "iea": IEANetZeroRoadmap(source_path=self.source_path),
-            "zurbriggen": DACCapacitiesZurbriggen(
-                settings=self.settings, source_path=self.source_path
-            ),
+            "zurbriggen": DACCapacitiesZurbriggen(source_path=self.source_path),
         }
 
     # -------- outward-facing accessors ------------------

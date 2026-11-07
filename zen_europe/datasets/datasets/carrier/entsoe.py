@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import hashlib
 import json
 import logging
 import os
+import re
 import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
@@ -22,7 +22,6 @@ from entsoe.mappings import NEIGHBOURS as _SUBZONE_NEIGHBOURS
 from entsoe.parsers import parse_crossborder_flows, parse_generation, parse_loads
 from zen_creator.datasets.datasets.dataset import Dataset
 from zen_creator.datasets.datasets.metadata import MetaData
-from zen_creator.utils.settings import Settings
 
 from zen_europe.utils.time_series import (
     canonicalize_hourly_year,
@@ -175,6 +174,11 @@ class _QueryFailedError(RuntimeError):
     """A request kept failing, so the query result would be incomplete."""
 
 
+def _redact_api_token(error: Exception) -> str:
+    """Return an exception message with ENTSO-E credentials removed."""
+    return re.sub(r"(securityToken=)[^&\s]+", r"\1<redacted>", str(error))
+
+
 def _request_with_retry(request: Callable[[], _Result], description: str) -> _Result:
     """Run `request`, retrying transient `requests` errors with a growing delay.
 
@@ -183,11 +187,13 @@ def _request_with_retry(request: Callable[[], _Result], description: str) -> _Re
         try:
             return request()
         except requests.RequestException as exc:
+            redacted_error = _redact_api_token(exc)
             if attempt == _REQUEST_ATTEMPTS:
                 raise _QueryFailedError(
-                    f"{description} failed after {_REQUEST_ATTEMPTS} attempts: {exc}"
+                    f"{description} failed after {_REQUEST_ATTEMPTS} attempts: "
+                    f"{redacted_error}"
                 ) from exc
-            logger.warning(f"{description} failed ({exc}); retrying")
+            logger.warning(f"{description} failed ({redacted_error}); retrying")
             time.sleep(_RETRY_DELAY_SECONDS * attempt)
     raise AssertionError("unreachable")
 
@@ -224,14 +230,7 @@ class ENTSOE(Dataset[pd.DataFrame]):
         range(2015, datetime.now().year)
     )
 
-    def __init__(
-        self,
-        settings: Settings,
-        set_nodes: list[str],
-        source_path: Path | str | None = None,
-    ):
-        self.settings = settings
-        self.set_nodes = set_nodes
+    def __init__(self, source_path: Path | str | None = None) -> None:
         self.last_entsoe_year = datetime.now().year - 1
         self._client: EntsoeRawClient | None = None
         super().__init__(source_path=source_path)
@@ -293,14 +292,13 @@ class ENTSOE(Dataset[pd.DataFrame]):
         base = Path(self.source_path) / "02-carrier" / "entsoe" / name
         return base.with_suffix(".feather"), base.with_suffix(".json")
 
-    def _cached_query(self, name, query):
+    def _cached_query(self, name, query, *, overwrite: bool = False):
         """Return the cached result for `name`, querying and caching it on
         first use. ENTSO-E queries loop over every country and are slow, so
         results are persisted as feather files with a small json sidecar
         recording how to restore the original index/columns."""
         data_path, meta_path = self._cache_paths(name)
 
-        overwrite = self.settings.cache.overwrite_entsoe
         if data_path.exists() and meta_path.exists() and not overwrite:
             logger.info(f"Loading cached ENTSO-E data for '{name}' from {data_path}")
             frame = pd.read_feather(data_path)
@@ -334,6 +332,7 @@ class ENTSOE(Dataset[pd.DataFrame]):
                     "n_index_levels": data.index.nlevels,
                     "is_series": is_series,
                     "columns_are_int": columns_are_int,
+                    "no_data": data.empty,
                 }
             )
         )
@@ -342,26 +341,47 @@ class ENTSOE(Dataset[pd.DataFrame]):
 
     # -------- outward-facing accessors ------------------
 
-    def get_demand(self) -> pd.DataFrame:
+    def get_demand(
+        self, *, year: int, nodes: list[str], overwrite: bool = False
+    ) -> pd.DataFrame:
         """Hourly electricity demand [GW] per country, for the configured
         time-series year, indexed by hour of year."""
-        year = self.settings.time.time_series_year
         require_acceptable_year(
             year,
             dataset_name=self.name,
             setting_name="time_series_year",
             acceptable_years=self.ACCEPTABLE_YEARS,
         )
-        demand = self._cached_query(f"demand_{year}", self._query_demand)
+        nodes = self._normalize_nodes(nodes)
+        shards = _map_parallel(
+            lambda node: self._cached_query(
+                f"demand/{year}/{node}",
+                lambda: self._query_demand(year, [node]),
+                overwrite=overwrite,
+            ),
+            nodes,
+        )
+        demand = (
+            pd.concat(shards, axis=1).reindex(columns=nodes)
+            if shards
+            else pd.DataFrame()
+        )
         demand = canonicalize_hourly_year(
             demand, year=year, dataset_name=f"{self.name}.demand"
         )
         demand = demand.where(demand != 0)
         demand = demand.interpolate().fillna(0)
         demand = demand / 1000  # MW -> GW
-        return demand
+        return demand.reindex(columns=nodes)
 
-    def get_generation(self, psr_type: str, year: int | None = None) -> pd.DataFrame:
+    def get_generation(
+        self,
+        *,
+        psr_type: str,
+        year: int,
+        nodes: list[str],
+        overwrite: bool = False,
+    ) -> pd.DataFrame:
         """Hourly actual generation [GW] per country for a given production
         type (see `entsoe.mappings.PSRTYPE_MAPPINGS`), indexed by hour of year.
 
@@ -369,16 +389,25 @@ class ENTSOE(Dataset[pd.DataFrame]):
             psr_type: ENTSO-E production-type code, e.g. "B14" for nuclear.
             year: Year to query; defaults to `settings.time.reference_year`.
         """
-        year = year if year is not None else self.last_entsoe_year
         require_acceptable_year(
             year,
             dataset_name=self.name,
             setting_name="query_year",
             acceptable_years=self.ACCEPTABLE_YEARS,
         )
-        generation = self._cached_query(
-            f"generation_{psr_type}_{year}",
-            lambda: self._query_generation(psr_type, year),
+        nodes = self._normalize_nodes(nodes)
+        shards = _map_parallel(
+            lambda node: self._cached_query(
+                f"generation/{psr_type}/{year}/{node}",
+                lambda: self._query_generation(psr_type, year, [node]),
+                overwrite=overwrite,
+            ),
+            nodes,
+        )
+        generation = (
+            pd.concat(shards, axis=1).reindex(columns=nodes)
+            if shards
+            else pd.DataFrame()
         )
         generation = canonicalize_hourly_year(
             generation.astype(float),
@@ -386,10 +415,15 @@ class ENTSOE(Dataset[pd.DataFrame]):
             dataset_name=f"{self.name}.generation.{psr_type}",
         ).interpolate()
         generation = generation / 1000  # MW -> GW
-        return generation
+        return generation.reindex(columns=nodes)
 
     def get_capacity_existing(
-        self, psr_type: str, year: int | None = None
+        self,
+        *,
+        psr_type: str,
+        year: int,
+        nodes: list[str],
+        overwrite: bool = False,
     ) -> pd.Series:
         """Year-ahead installed generation capacity [GW] per country for a
         given production type, indexed by (node, year_construction).
@@ -398,22 +432,35 @@ class ENTSOE(Dataset[pd.DataFrame]):
             psr_type: ENTSO-E production-type code, e.g. "B14" for nuclear.
             year: Year to query; defaults to `settings.time.reference_year`.
         """
-        year = year if year is not None else self.last_entsoe_year
         require_acceptable_year(
             year,
             dataset_name=self.name,
             setting_name="query_year",
             acceptable_years=self.ACCEPTABLE_YEARS,
         )
-        capacity = self._cached_query(
-            f"capacity_{psr_type}_{year}",
-            lambda: self._query_capacity_existing(psr_type, year),
+        nodes = self._normalize_nodes(nodes)
+        shards = _map_parallel(
+            lambda node: self._cached_query(
+                f"capacity/{psr_type}/{year}/{node}",
+                lambda: self._query_capacity_existing(psr_type, year, [node]),
+                overwrite=overwrite,
+            ),
+            nodes,
         )
+        capacity = pd.concat(shards) if shards else pd.Series(dtype=float)
         capacity = capacity.dropna()
         capacity = capacity[capacity != 0]
+        capacity = capacity[capacity.index.get_level_values("node").isin(nodes)]
         return capacity / 1000  # MW -> GW
 
-    def get_transmission_capacity(self) -> pd.DataFrame:
+    def get_transmission_capacity(
+        self,
+        *,
+        year: int,
+        nodes: list[str],
+        monthly: bool,
+        overwrite: bool = False,
+    ) -> pd.DataFrame:
         """Net transfer capacity [GW] between neighbouring countries,
         indexed by (edge, year_construction), where edge is "NODE_FROM-NODE_TO".
 
@@ -421,7 +468,6 @@ class ENTSOE(Dataset[pd.DataFrame]):
         direct NTC series and are not included; callers modeling such edges
         need to substitute their own assumption.
         """
-        year = self.settings.time.reference_year - 1
         last_entsoe_year = self.last_entsoe_year
         if year > last_entsoe_year:
             logging.info(
@@ -430,19 +476,18 @@ class ENTSOE(Dataset[pd.DataFrame]):
                 f"Using {last_entsoe_year} instead."
             )
             year = last_entsoe_year
-        monthly = self.settings.data_source.use_monthly_entsoe_ntc
-        # only the edges between the model nodes are queried, so the cache is
-        # specific to that set of edges
-        edges_hash = hashlib.sha1(json.dumps(self._ntc_edges()).encode()).hexdigest()[
-            :8
-        ]
-        cache_name = (
-            f"transmission_capacity_{'monthly' if monthly else 'yearly'}"
-            f"_{year}_{edges_hash}"
+        nodes = self._normalize_nodes(nodes)
+        edges = self._ntc_edges(nodes)
+        mode = "monthly" if monthly else "yearly"
+        shards = _map_parallel(
+            lambda edge: self._cached_query(
+                f"transmission_capacity/{mode}/{year}/{edge[0]}-{edge[1]}",
+                lambda: self._query_transmission_capacity(year, monthly, [edge]),
+                overwrite=overwrite,
+            ),
+            edges,
         )
-        capacity = self._cached_query(
-            cache_name, lambda: self._query_transmission_capacity(year, monthly)
-        )
+        capacity = pd.concat(shards) if shards else pd.Series(dtype=float)
         capacity = capacity.fillna(0).sort_index() / 1000  # MW -> GW
         capacity.index = pd.MultiIndex.from_arrays(
             [capacity.index, [year] * len(capacity)],
@@ -452,14 +497,12 @@ class ENTSOE(Dataset[pd.DataFrame]):
 
     # -------- per-country query loops ------------------
 
-    def _query_demand(self) -> pd.DataFrame:
-        year = self.settings.time.time_series_year
+    def _query_demand(self, year: int, nodes: list[str]) -> pd.DataFrame:
         start, end = self._year_bounds(year)
         demand = pd.DataFrame(
             index=pd.date_range(start, end, freq="1h", inclusive="left")
         )
         client = self._entsoe_client
-        nodes = list(self.set_nodes)
 
         def query_node(node: str) -> pd.Series | None:
             logger.info(f"Querying ENTSO-E demand for {node}")
@@ -494,13 +537,14 @@ class ENTSOE(Dataset[pd.DataFrame]):
         demand.index.name = "time"
         return demand
 
-    def _query_generation(self, psr_type: str, year: int) -> pd.DataFrame:
+    def _query_generation(
+        self, psr_type: str, year: int, nodes: list[str]
+    ) -> pd.DataFrame:
         start, end = self._year_bounds(year)
         generation = pd.DataFrame(
             index=pd.date_range(start, end, freq="1h", inclusive="left")
         )
         client = self._entsoe_client
-        nodes = list(self.set_nodes)
 
         def query_node(node: str) -> pd.Series | None:
             logger.info(f"Querying ENTSO-E generation for {node} of type {psr_type}")
@@ -530,10 +574,11 @@ class ENTSOE(Dataset[pd.DataFrame]):
         generation.index.name = "time"
         return generation
 
-    def _query_capacity_existing(self, psr_type: str, year: int) -> pd.Series:
+    def _query_capacity_existing(
+        self, psr_type: str, year: int, nodes: list[str]
+    ) -> pd.Series:
         start, end = self._year_bounds(year)
         client = self._entsoe_client
-        nodes = list(self.set_nodes)
 
         def query_node(node: str) -> float | None:
             logger.info(
@@ -575,7 +620,9 @@ class ENTSOE(Dataset[pd.DataFrame]):
             [capacity[node] for node, _ in index], index=index, name="capacity_existing"
         )
 
-    def _query_transmission_capacity(self, year: int, monthly: bool) -> pd.Series:
+    def _query_transmission_capacity(
+        self, year: int, monthly: bool, edges: list[tuple[str, str]]
+    ) -> pd.Series:
         year_entsoe = self.last_entsoe_year
         if year > year_entsoe:
             logging.info(
@@ -585,7 +632,6 @@ class ENTSOE(Dataset[pd.DataFrame]):
             )
             year = year_entsoe
         start, end = self._year_bounds(year)
-        edges = self._ntc_edges()
         _ = self._entsoe_client  # create the client before the threads share it
 
         def query_edge(edge: tuple[str, str]) -> float:
@@ -602,15 +648,23 @@ class ENTSOE(Dataset[pd.DataFrame]):
         }
         return pd.Series(capacity, dtype=float)
 
-    def _ntc_edges(self) -> list[tuple[str, str]]:
+    def _ntc_edges(self, requested_nodes: list[str]) -> list[tuple[str, str]]:
         """The directed neighbouring country pairs between the model nodes."""
-        nodes = set(self.set_nodes).intersection(_NODES)
+        nodes = set(requested_nodes).intersection(_NODES)
         return sorted(
             (node_from, node_to)
             for node_from, adjacent in _NEIGHBOURS.items()
             for node_to in adjacent
             if node_from in nodes and node_to in nodes
         )
+
+    @staticmethod
+    def _normalize_nodes(nodes: list[str]) -> list[str]:
+        """Return unique supported model nodes in deterministic order."""
+        unsupported = set(nodes).difference(_NODES)
+        if unsupported:
+            raise ValueError(f"Unsupported ENTSO-E nodes: {sorted(unsupported)}")
+        return sorted(set(nodes))
 
     def _query_ntc(
         self,

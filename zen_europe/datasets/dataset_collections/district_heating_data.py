@@ -11,7 +11,6 @@ if TYPE_CHECKING:
 import pandas as pd
 from zen_creator import Attribute, ConversionTechnology, DatasetCollection
 from zen_creator.utils.attribute import SourceInformation
-from zen_creator.utils.settings import Settings
 
 from zen_europe.datasets.dataset_collections.heat_demand import HeatDemand
 from zen_europe.datasets.datasets.carrier.eurostat import Eurostat
@@ -26,8 +25,7 @@ class DistrictHeatingData(DatasetCollection):
 
     name = "district_heating_data"
 
-    def __init__(self, settings: Settings, source_path: Path | str):
-        self.settings = settings
+    def __init__(self, source_path: Path | str | None = None) -> None:
         super().__init__(source_path=source_path)
 
     def _get_data(self) -> Dict[str, Dataset[Any] | DatasetCollection]:
@@ -39,8 +37,8 @@ class DistrictHeatingData(DatasetCollection):
         return {
             "dea": DEA(self.source_path),
             "ecb": ECBInflation(self.source_path),
-            "heat_demand": HeatDemand(self.settings, self.source_path),
-            "eurostat": Eurostat(self.settings, self.source_path),
+            "heat_demand": HeatDemand(self.source_path),
+            "eurostat": Eurostat(self.source_path),
             "hre": HRE(self.source_path),
         }
 
@@ -66,7 +64,7 @@ class DistrictHeatingData(DatasetCollection):
         capex = capex_GWh * flh  # in M€/(GWh / year) -> M€ / GW -> € / kW
         ECB_dataset = cast(ECBInflation, self.data["ecb"])
         inflation = ECB_dataset.get_inflation_rate(
-            base_year=int(money_year_src), target_year=self.settings.time.price_year
+            base_year=int(money_year_src), target_year=element.settings.time.price_year
         )
         capex = capex * inflation
         capex = interpolate_missing_years(capex)
@@ -110,7 +108,7 @@ class DistrictHeatingData(DatasetCollection):
         cost = cost.loc[element.settings.time.years]
         ecb_dataset = cast(ECBInflation, self.data["ecb"])
         inflation = ecb_dataset.get_inflation_rate(
-            base_year=int(money_year_src), target_year=self.settings.time.price_year
+            base_year=int(money_year_src), target_year=element.settings.time.price_year
         )
         cost = cost * inflation
         source = SourceInformation(
@@ -145,7 +143,7 @@ class DistrictHeatingData(DatasetCollection):
         cost = cost.loc[element.settings.time.years]
         ecb_dataset = cast(ECBInflation, self.data["ecb"])
         inflation = ecb_dataset.get_inflation_rate(
-            base_year=int(money_year_src), target_year=self.settings.time.price_year
+            base_year=int(money_year_src), target_year=element.settings.time.price_year
         )
         cost = cost * inflation
         default_value = cost.iloc[0]
@@ -169,7 +167,7 @@ class DistrictHeatingData(DatasetCollection):
 
         """
         eurostat_dataset = cast(Eurostat, self.data["eurostat"])
-        share_regions = eurostat_dataset.get_population_by_urbanization()
+        share_regions = eurostat_dataset.get_population_by_urbanization(element)
         share_regions = share_regions[eurostat_dataset.eurostat_year].unstack()
         hre = cast(HRE, self.data["hre"])
         potential = cast(pd.Series, hre.get_district_heating_potential().squeeze())

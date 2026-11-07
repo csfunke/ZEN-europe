@@ -14,24 +14,21 @@ if TYPE_CHECKING:
 
 from zen_creator import Attribute, Carrier, DatasetCollection
 from zen_creator.utils.attribute import SourceInformation
-from zen_creator.utils.settings import Settings
 
 from zen_europe.datasets.dataset_collections.heat_demand import HeatDemand
 from zen_europe.datasets.datasets.carrier.bfe import BFE
 from zen_europe.datasets.datasets.carrier.entsoe import ENTSOE
 from zen_europe.datasets.datasets.carrier.eurostat import Eurostat
+from zen_europe.utils.time_series import require_acceptable_year
 
 
 class ElectricityDemand(DatasetCollection):
     """Extracting electricity demand data."""
 
     name = "electricity_demand"
+    ACCEPTABLE_YEARS = ENTSOE.ACCEPTABLE_YEARS
 
-    def __init__(
-        self, settings: Settings, set_nodes: list[str], source_path: Path | str
-    ):
-        self.settings = settings
-        self.set_nodes = set_nodes
+    def __init__(self, source_path: Path | str | None = None) -> None:
         super().__init__(source_path=source_path)
 
     def _get_data(self) -> Dict[str, Dataset[Any] | DatasetCollection]:
@@ -41,10 +38,10 @@ class ElectricityDemand(DatasetCollection):
             raise ValueError("source_path must be set to load the dataset collection.")
 
         return {
-            "entsoe": ENTSOE(self.settings, self.set_nodes, self.source_path),
-            "heat_demand": HeatDemand(self.settings, self.source_path),
-            "eurostat": Eurostat(self.settings, self.source_path),
-            "when2heat": When2Heat(self.settings, self.source_path),
+            "entsoe": ENTSOE(self.source_path),
+            "heat_demand": HeatDemand(self.source_path),
+            "eurostat": Eurostat(self.source_path),
+            "when2heat": When2Heat(self.source_path),
             "bfe": BFE(self.source_path),
         }
 
@@ -77,13 +74,19 @@ class ElectricityDemand(DatasetCollection):
         Get the electricity demand for the specified element.
 
         """
+        require_acceptable_year(
+            element.settings.time.time_series_year,
+            dataset_name=self.name,
+            setting_name="time_series_year",
+            acceptable_years=self.ACCEPTABLE_YEARS,
+        )
         # get base demand data from ENTSOE dataset
-        demand = self._get_base_demand()
+        demand = self._get_base_demand(element)
         # load heat demand
         heat_demand_dataset = cast(HeatDemand, self.data["heat_demand"])
         heat_demand = heat_demand_dataset._calculate_demand(element)
         # load heating share, ignores district heating electricity demand
-        heating_share = heat_demand_dataset._calculate_heating_share_household()
+        heating_share = heat_demand_dataset._calculate_heating_share_household(element)
         heating_share_hp = cast(pd.DataFrame, heating_share.loc["heat_pump"])
         heating_share_eb = cast(pd.DataFrame, heating_share.loc["electrode_boiler"])
         common_nodes = heating_share_hp.index.intersection(
@@ -95,7 +98,7 @@ class ElectricityDemand(DatasetCollection):
         assert len(missing_nodes) == 0, (
             f"Missing nodes in heating share data: " f"{missing_nodes}"
         )
-        time_series_year = self.settings.time.time_series_year
+        time_series_year = element.settings.time.time_series_year
         self._validate_heating_share_year(
             time_series_year, heating_share_hp, heating_share_eb
         )
@@ -107,7 +110,10 @@ class ElectricityDemand(DatasetCollection):
             heat_demand_eb * 1
         )  # assume 100% efficiency for electrode boilers
         when2heat_dataset = cast(When2Heat, self.data["when2heat"])
-        cop_data = when2heat_dataset.get_COP()
+        cop_data = when2heat_dataset.get_COP(
+            element.settings.time.resolved_weather_year,
+            overwrite=element.settings.cache.overwrite_when2heat,
+        )
         cop_data = cast(pd.DataFrame, cop_data.xs("floor", level="category", axis=1))
         electricity_demand_hp = heat_demand_hp.div(cop_data, axis=0)
         # correct demand
@@ -137,7 +143,7 @@ class ElectricityDemand(DatasetCollection):
             unit="GW",
         )
 
-    def _get_base_demand(self) -> pd.DataFrame:
+    def _get_base_demand(self, element: Carrier) -> pd.DataFrame:
         """
         Get the base electricity demand data.
 
@@ -145,4 +151,8 @@ class ElectricityDemand(DatasetCollection):
             pd.DataFrame: A DataFrame containing the base electricity demand data.
         """
         entsoe_dataset = cast(ENTSOE, self.data["entsoe"])
-        return entsoe_dataset.get_demand()
+        return entsoe_dataset.get_demand(
+            year=element.settings.time.time_series_year,
+            nodes=list(element.model.config.system.set_nodes),
+            overwrite=element.settings.cache.overwrite_entsoe,
+        )
