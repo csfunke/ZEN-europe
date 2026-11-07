@@ -1,67 +1,47 @@
 models:
-  Reg4Fuels_V23:
+  Reg4Fuels_V24:
     settings:
       scenario:
-        sensitivity_reg4fuels: true
+        sensitivity_reg4fuels: false
+      time:
+        reference_year: 2050
+        last_year: 2050
+        interval_between_years: 5
+        time_series_year: 2019
+  # Reg4Fuels_V24_time_matching_annual:
+  #   settings:
+  #     calibration:
+  #       use_renewable_credits: true
+  #     structure:
+  #       set_carriers:
+  #         - renewable_energy_credit
+  #       set_storage_technologies:
+  #         - renewable_energy_credit_storage
 
-  Reg4Fuels_V23_time_matching_annual:
-    settings:
-      calibration:
-        use_renewable_credits: true
-      structure:
-        set_carriers:
-          - renewable_energy_credit
-        set_storage_technologies:
-          - renewable_energy_credit_storage
+  # Reg4Fuels_V24_time_matching_exact:
+  #   settings:
+  #     calibration:
+  #       use_renewable_credits: true
+  #     structure:
+  #       set_carriers:
+  #         - renewable_energy_credit
 
-  Reg4Fuels_V23_time_matching_exact:
-    settings:
-      calibration:
-        use_renewable_credits: true
-      structure:
-        set_carriers:
-          - renewable_energy_credit
-
-  Reg4Fuels_V23_net_import_limits:
+  Reg4Fuels_V24_net_import_limits:
     settings:
       scenario:
         sensitivity_transport_limits: true
 
-  Reg4Fuels_V23_net_import_limits_winter:
+  Reg4Fuels_V24_net_import_limits_winter:
     settings:
       scenario:
         sensitivity_transport_limits: true 
 
-  Reg4Fuels_V23_net_survival:
+  Reg4Fuels_V24_net_survival:
     settings:
       scenario:
         sensitivity_net_survival: true
 
-  Reg4Fuels_V23_net_survival_winter:
+  Reg4Fuels_V24_net_survival_winter:
     settings:
       scenario:
         sensitivity_net_survival: true
-  # Reg4Fuels_V20_pathway:
-  #   system:
-  #       aggregated_time_steps_per_year: 100
-  #   settings:
-  #     time:
-  #       reference_year: 2030
-  #       last_year: 2050
-  #       interval_between_years: 5
-  #     investment:
-  #       use_diffusion_rates: true
-  #     scenario:
-  #       sensitivity_reg4fuels: true
-  #       sensitivity_operations: false
-  #       sensitivity_transport_limits: false
-  # Reg4Fuels_V20_independence:
-  #   settings:
-  #     time:
-  #       reference_year: 2050
-  #       last_year: 2050
-  #       interval_between_years: 5
-  #     scenario:
-  #       sensitivity_reg4fuels: true
-  #       sensitivity_operations: false
-  #       sensitivity_transport_limits: true

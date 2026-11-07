@@ -6,7 +6,7 @@ source_path: "C:/Users/funkec/Documents/GITHUB/01_ZEN_universe/04_ZEN_europe-reg
 system:
   use_rolling_horizon: false
   aggregated_time_steps_per_year: 500
-  conduct_time_series_aggregation: false
+  conduct_time_series_aggregation: true
 # dataset-specific, type-checked settings (see zen_europe/settings/).
 # their defaults live in the category classes, so only overrides belong here.
 # a setting that controls a system value (e.g. region.set_nodes) is set here
